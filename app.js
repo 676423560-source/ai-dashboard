@@ -103,6 +103,7 @@ const dailyData = [
 ];
 
 const platformSpendRows = window.platformSpendRows || [];
+const liveAccountRelations = window.liveAccountRelations || [];
 const spendDates = platformSpendRows.map((row) => row.date).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
 const defaultAccountFields = [
@@ -181,6 +182,47 @@ const platformSourceConfig = {
   xhs_juguang: "聚光",
   xhs_chengfeng: "乘风",
 };
+
+const accountRelationByPlatformId = liveAccountRelations.reduce((output, item) => {
+  const platform = normalizeValue(item.platform);
+  const accountId = normalizeValue(item.accountId);
+  if (platform && accountId) output.set(`${platform}::${accountId}`, item);
+  return output;
+}, new Map());
+
+function normalizeValue(value) {
+  return String(value ?? "").trim();
+}
+
+function accountRelationFor(row) {
+  const platform = normalizeValue(row.platform);
+  const accountId = normalizeValue(row.accountId);
+  return accountRelationByPlatformId.get(`${platform}::${accountId}`) || null;
+}
+
+function relatedProjectName(row) {
+  return normalizeValue(accountRelationFor(row)?.projectName) || normalizeValue(row.projectName) || normalizeValue(row.projectId) || "-";
+}
+
+function relatedProjectId(row) {
+  return normalizeValue(accountRelationFor(row)?.projectName) || normalizeValue(row.projectId) || relatedProjectName(row);
+}
+
+function relatedAccountName(row) {
+  return normalizeValue(accountRelationFor(row)?.accountName) || normalizeValue(row.accountName) || normalizeValue(row.accountId) || "-";
+}
+
+function relatedAccountId(row) {
+  return normalizeValue(accountRelationFor(row)?.accountId) || normalizeValue(row.accountId) || "-";
+}
+
+function relatedLiveRoomName(row) {
+  return normalizeValue(accountRelationFor(row)?.liveRoomName);
+}
+
+function relatedChannelCode(row) {
+  return normalizeValue(accountRelationFor(row)?.channelCode);
+}
 
 const metricKeys = [
   "impressions",
@@ -497,7 +539,7 @@ function availableAccountProjects() {
       : platformSpendRows.filter(
           (row) => row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchSpend(row),
         );
-  return [...new Set(rows.map((row) => row.projectName).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  return [...new Set(rows.map((row) => relatedProjectName(row)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
 
 function toggleDimensionMenu() {
@@ -1324,7 +1366,7 @@ function spendRowsForPeriod() {
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
   const matchProject = (row) =>
-    state.accountDimension !== "project" || state.accountProject === "all" || row.projectName === state.accountProject;
+    state.accountDimension !== "project" || state.accountProject === "all" || relatedProjectName(row) === state.accountProject;
   if (state.granularity === "month") {
     return platformSpendRows.filter(
       (row) =>
@@ -1338,7 +1380,13 @@ function spendRowsForPeriod() {
 
 function groupedSpendRows(rows) {
   const groups = rows.reduce((output, row) => {
-    const name = state.accountDimension === "project" ? row.projectName : row.accountName;
+    const projectName = relatedProjectName(row);
+    const projectId = relatedProjectId(row);
+    const accountName = relatedAccountName(row);
+    const accountId = relatedAccountId(row);
+    const liveRoomName = relatedLiveRoomName(row);
+    const channelCode = relatedChannelCode(row);
+    const name = state.accountDimension === "project" ? projectName : accountName;
     const key = `${row.platform}::${name}`;
     if (!output[key]) {
       output[key] = {
@@ -1364,30 +1412,34 @@ function groupedSpendRows(rows) {
     metricKeys.forEach((metricKey) => {
       output[key].metrics[metricKey] += Number(row[metricKey] || 0);
     });
-    output[key].ids.add(state.accountDimension === "project" ? row.projectId : row.accountId);
-    output[key].accounts.add(`${row.accountId}-${row.accountName}`);
-    output[key].projects.add(row.projectName);
+    output[key].ids.add(state.accountDimension === "project" ? projectId : accountId);
+    output[key].accounts.add(`${accountId}-${accountName}`);
+    output[key].projects.add(projectName);
     output[key].dates.add(row.date);
     output[key].sources.add(row.source);
     if (row.rawPlatform) output[key].rawPlatforms.add(row.rawPlatform);
     if (row.company) output[key].companies.add(row.company);
     if (row.note) output[key].notes.add(row.note);
     if (row.updatedAt && (!output[key].updatedAt || row.updatedAt > output[key].updatedAt)) output[key].updatedAt = row.updatedAt;
-    const accountKey = `${row.accountId}-${row.accountName}`;
+    const accountKey = `${accountId}-${accountName}`;
     const accountDetail = output[key].accountDetails.get(accountKey) || {
-      id: row.accountId,
-      name: row.accountName,
+      id: accountId,
+      name: accountName,
+      liveRoomName,
+      channelCode,
       spend: 0,
       dates: new Set(),
       source: row.source,
     };
     accountDetail.spend += row.spend;
     accountDetail.dates.add(row.date);
+    if (liveRoomName) accountDetail.liveRoomName = liveRoomName;
+    if (channelCode) accountDetail.channelCode = channelCode;
     output[key].accountDetails.set(accountKey, accountDetail);
-    const projectKey = `${row.projectId}-${row.projectName}`;
+    const projectKey = `${projectId}-${projectName}`;
     const projectDetail = output[key].projectDetails.get(projectKey) || {
-      id: row.projectId,
-      name: row.projectName,
+      id: projectId,
+      name: projectName,
       spend: 0,
     };
     projectDetail.spend += row.spend;
@@ -1421,6 +1473,8 @@ function groupedSpendRows(rows) {
             return {
               id: account.id,
               name: account.name,
+              liveRoomName: account.liveRoomName || "",
+              channelCode: account.channelCode || "",
               spend: Math.round(account.spend * 100) / 100,
               dateRange:
                 accountDates.length > 1
@@ -1462,7 +1516,10 @@ function accountGroupedRows(rows) {
   return groupedRows
     .filter((row) => {
       if (!query) return true;
-      return [row.platform, row.dimensionId, row.name, row.source, row.dateRange].join(" ").toLowerCase().includes(query);
+      const accountText = (row.accountDetails || [])
+        .map((account) => [account.name, account.id, account.liveRoomName, account.channelCode].join(" "))
+        .join(" ");
+      return [row.platform, row.dimensionId, row.name, row.source, row.dateRange, accountText].join(" ").toLowerCase().includes(query);
     })
     .sort(accountSort);
 }
@@ -1564,7 +1621,11 @@ function showAccountDetailModal(encodedKey) {
               <span class="detail-rank">${index + 1}</span>
               <div>
                 <strong>${escapeHtml(account.name)}</strong>
-                <small>ID ${escapeHtml(account.id)} · ${escapeHtml(account.dateRange)}</small>
+                <small>
+                  ID ${escapeHtml(account.id)} · ${escapeHtml(account.dateRange)}
+                  ${account.liveRoomName ? ` · 直播间 ${escapeHtml(account.liveRoomName)}` : ""}
+                  ${account.channelCode ? ` · 渠道码 ${escapeHtml(account.channelCode)}` : ""}
+                </small>
               </div>
               <strong>${money(account.spend)}</strong>
             </article>
