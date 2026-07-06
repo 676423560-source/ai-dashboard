@@ -1171,6 +1171,61 @@ button:focus-visible {
 
 .account-table {
   min-width: 1260px;
+  table-layout: fixed;
+}
+
+.account-table th,
+.account-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-table th {
+  position: relative;
+  user-select: none;
+}
+
+.column-resize-handle {
+  position: absolute;
+  top: 10px;
+  right: -6px;
+  bottom: 10px;
+  z-index: 2;
+  width: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: col-resize;
+}
+
+.column-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  left: 6px;
+  width: 2px;
+  height: 64%;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.24);
+  opacity: 0;
+  transition:
+    opacity 0.18s var(--ease-out),
+    background 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
+}
+
+.account-table th:hover .column-resize-handle::after,
+.column-resize-handle:focus-visible::after,
+body.column-resizing .column-resize-handle::after {
+  opacity: 1;
+  background: rgba(37, 99, 235, 0.72);
+  transform: scaleY(1.08);
+}
+
+body.column-resizing {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .account-toolbar {
@@ -1367,6 +1422,7 @@ button:focus-visible {
 .detail-dialog {
   position: relative;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 14px;
   width: min(760px, 100%);
   max-height: min(720px, calc(100dvh - 48px));
@@ -1401,7 +1457,26 @@ button:focus-visible {
   display: grid;
   gap: 12px;
   min-height: 0;
-  overflow: auto;
+  max-height: min(614px, calc(100dvh - 154px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, 0.34) rgba(226, 232, 240, 0.52);
+}
+
+.detail-dialog-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.detail-dialog-body::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.52);
+}
+
+.detail-dialog-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.34);
 }
 
 .field-dialog {

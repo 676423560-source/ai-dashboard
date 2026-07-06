@@ -133,6 +133,14 @@ const state = {
 
 const colors = ["#1e40af", "#0f766e", "#c2410c", "#a16207"];
 
+const accountColumnWidths = {
+  platform: 170,
+  name: 420,
+  accountCount: 210,
+  dimensionId: 220,
+  cost: 170,
+};
+
 const accountFieldOptions = [
   { key: "platform", label: "平台", group: "基础字段" },
   { key: "name", label: "项目", group: "基础字段" },
@@ -334,6 +342,7 @@ function makeRoom(name, cost, impressions, clicks, enters, viewers, interactions
 function init() {
   const dateSelect = document.querySelector("#dateSelect");
   renderDateOptions();
+  renderRoomOptions();
 
   document.querySelector("#periodSelect").addEventListener("change", (event) => {
     state.granularity = event.target.value;
@@ -355,6 +364,8 @@ function init() {
 
   document.querySelector("#roomSelect").addEventListener("change", (event) => {
     state.room = event.target.value;
+    state.selectedAccountKey = "";
+    renderAccountDimensionPicker();
     render();
   });
 
@@ -494,6 +505,26 @@ function renderDateOptions() {
     dateSelect.append(option);
   });
   dateSelect.value = state.date;
+}
+
+function renderRoomOptions() {
+  const roomSelect = document.querySelector("#roomSelect");
+  const roomNames = liveRoomOptions();
+  roomSelect.innerHTML = [
+    `<option value="all">全部直播间</option>`,
+    ...roomNames.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`),
+  ].join("");
+  if (state.room !== "all" && !roomNames.includes(state.room)) {
+    state.room = "all";
+  }
+  roomSelect.value = state.room;
+}
+
+function liveRoomOptions() {
+  const names = liveAccountRelations
+    .map((item) => normalizeValue(item.liveRoomName))
+    .filter(Boolean);
+  return [...new Set(names)].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
 
 function availableMonths() {
@@ -646,7 +677,8 @@ function selectedDays() {
 
 function selectedRooms(day = selectedDay()) {
   if (state.room === "all") return Object.values(day.rooms);
-  return [day.rooms[state.room]];
+  if (day.rooms[state.room]) return [day.rooms[state.room]];
+  return Object.values(day.rooms);
 }
 
 function totals(day) {
@@ -749,7 +781,7 @@ function renderView() {
 }
 
 function renderScope() {
-  const roomName = state.room === "all" ? "全部直播间" : selectedRooms()[0].name;
+  const roomName = selectedRoomLabel();
   const period = selectedPeriodLabel();
   document.querySelector("#scopeType").textContent =
     state.granularity === "month" ? "当前口径：月度汇总" : "当前口径：按天汇总";
@@ -760,9 +792,14 @@ function renderScope() {
       ? ` · ${state.accountProject}`
       : "";
   document.querySelector("#accountScope").textContent =
-    `${accountPlatformLabel()} · ${state.accountDimension === "project" ? "项目维度" : "账户维度"}${projectScope} · ${period}`;
+    `${roomName} · ${accountPlatformLabel()} · ${state.accountDimension === "project" ? "项目维度" : "账户维度"}${projectScope} · ${period}`;
   document.querySelector("#trendTitle").textContent =
     state.granularity === "month" ? "按月投放与直播趋势" : "按天投放与直播趋势";
+}
+
+function selectedRoomLabel() {
+  if (state.room === "all") return "全部直播间";
+  return selectedDay().rooms[state.room]?.name || state.room;
 }
 
 function renderSummary() {
@@ -1074,11 +1111,12 @@ function renderAccountDetails() {
     .map((row) => {
       return `
         <tr class="interactive-row ${row.key === state.selectedAccountKey ? "active" : ""}" data-account-key="${encodeURIComponent(row.key)}" tabindex="0" aria-selected="${row.key === state.selectedAccountKey}">
-          ${columns.map((column) => `<td>${column.render(row, totalCost)}</td>`).join("")}
+          ${columns.map((column) => `<td style="width: ${accountColumnWidth(column.key)}px">${column.render(row, totalCost)}</td>`).join("")}
         </tr>
       `;
     })
     .join("");
+  bindColumnResize();
 
   document.querySelectorAll("#accountTable .interactive-row").forEach((row) => {
     row.addEventListener("click", () => selectAccountRow(row.dataset.accountKey));
@@ -1207,8 +1245,57 @@ function accountTableColumns(totalCost) {
 function renderAccountTableHead(totalCost) {
   const columns = accountTableColumns(totalCost);
   document.querySelector("#accountTableHead").innerHTML = `
-    <tr>${columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr>
+    <tr>
+      ${columns
+        .map(
+          (column) => `
+            <th style="width: ${accountColumnWidth(column.key)}px">
+              <span>${escapeHtml(column.label)}</span>
+              <button class="column-resize-handle" data-resize-column="${column.key}" type="button" aria-label="调整${escapeHtml(column.label)}列宽"></button>
+            </th>
+          `,
+        )
+        .join("")}
+    </tr>
   `;
+}
+
+function accountColumnWidth(key) {
+  return accountColumnWidths[key] || 160;
+}
+
+function bindColumnResize() {
+  document.querySelectorAll("[data-resize-column]").forEach((handle) => {
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const key = handle.dataset.resizeColumn;
+      const columnIndex = accountTableColumns(0).findIndex((column) => column.key === key) + 1;
+      const startX = event.clientX;
+      const startWidth = accountColumnWidth(key);
+      document.body.classList.add("column-resizing");
+      handle.setPointerCapture?.(event.pointerId);
+
+      const updateWidth = (moveEvent) => {
+        const nextWidth = Math.max(96, Math.min(720, startWidth + moveEvent.clientX - startX));
+        accountColumnWidths[key] = nextWidth;
+        document
+          .querySelectorAll(`#accountTableHead th:nth-child(${columnIndex}), #accountTable td:nth-child(${columnIndex})`)
+          .forEach((cell) => {
+            cell.style.width = `${nextWidth}px`;
+          });
+      };
+
+      const stopResize = () => {
+        document.body.classList.remove("column-resizing");
+        window.removeEventListener("pointermove", updateWidth);
+        window.removeEventListener("pointerup", stopResize);
+      };
+
+      window.addEventListener("pointermove", updateWidth);
+      window.addEventListener("pointerup", stopResize, { once: true });
+    });
+  });
 }
 
 function accountShare(row, totalCost) {
@@ -1376,17 +1463,24 @@ function spendRowsForPeriod() {
   const matchPlatform = (row) => state.accountPlatform === "all" || row.platform === state.accountPlatform;
   const matchPlatformSource = (row) =>
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
+  const matchRoom = (row) => state.room === "all" || relatedLiveRoomName(row) === state.room;
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
   const matchProject = (row) =>
     state.accountDimension !== "project" || state.accountProject === "all" || relatedProjectName(row) === state.accountProject;
   if (state.granularity === "month") {
     return platformSpendRows.filter(
       (row) =>
-        row.date.startsWith(state.month) && matchPlatform(row) && matchPlatformSource(row) && matchSpend(row) && matchProject(row),
+        row.date.startsWith(state.month) &&
+        matchPlatform(row) &&
+        matchPlatformSource(row) &&
+        matchRoom(row) &&
+        matchSpend(row) &&
+        matchProject(row),
     );
   }
   return platformSpendRows.filter(
-    (row) => row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchSpend(row) && matchProject(row),
+    (row) =>
+      row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row) && matchProject(row),
   );
 }
 
@@ -1684,7 +1778,7 @@ function statusClass(status) {
 }
 
 function selectedRoomSummaries() {
-  const roomKeys = state.room === "all" ? Object.keys(selectedDay().rooms) : [state.room];
+  const roomKeys = state.room === "all" || !selectedDay().rooms[state.room] ? Object.keys(selectedDay().rooms) : [state.room];
   return roomKeys.map((key) => {
     const rooms = selectedDays().map((day) => day.rooms[key]);
     const summary = rooms.reduce(
