@@ -107,21 +107,8 @@ const spendDates = platformSpendRows.map((row) => row.date).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
 const defaultAccountFields = [
   "platform",
-  "dimensionId",
   "name",
-  "cost",
-  "impressions",
-  "clicks",
-  "ctr",
-  "cpc",
-  "cpm",
-  "interactions",
-  "interactionRate",
   "accountCount",
-  "projectCount",
-  "share",
-  "dateRange",
-  "source",
 ];
 
 const state = {
@@ -147,9 +134,9 @@ const colors = ["#1e40af", "#0f766e", "#c2410c", "#a16207"];
 
 const accountFieldOptions = [
   { key: "platform", label: "平台", group: "基础字段" },
+  { key: "name", label: "项目", group: "基础字段" },
+  { key: "accountCount", label: "投放账户数量", group: "基础字段" },
   { key: "dimensionId", label: "项目/账号ID", group: "基础字段" },
-  { key: "name", label: "项目/账号名称", group: "基础字段" },
-  { key: "accountCount", label: "关联账户", group: "基础字段" },
   { key: "projectCount", label: "关联项目", group: "基础字段" },
   { key: "dateRange", label: "日期范围", group: "基础字段" },
   { key: "cost", label: "消耗", group: "投放效果" },
@@ -174,10 +161,11 @@ const accountFieldOptions = [
 ];
 
 const accountFieldPresets = {
-  basic: ["platform", "dimensionId", "name", "cost", "accountCount", "projectCount", "share", "dateRange"],
+  basic: ["platform", "name", "accountCount"],
   performance: [
     "platform",
     "name",
+    "accountCount",
     "cost",
     "impressions",
     "clicks",
@@ -1077,9 +1065,9 @@ function accountTableColumns(totalCost) {
     },
     name: {
       key: "name",
-      label: state.accountDimension === "project" ? "项目名称" : "账号名称",
+      label: state.accountDimension === "project" ? "项目" : "投放账户",
       exportValue: (row) => row.name,
-      render: (row) => escapeHtml(row.name),
+      render: (row) => `<strong class="project-name-cell">${escapeHtml(row.name)}</strong>`,
     },
     cost: {
       key: "cost",
@@ -1121,11 +1109,11 @@ function accountTableColumns(totalCost) {
     },
     accountCount: {
       key: "accountCount",
-      label: "关联账户",
+      label: "投放账户数量",
       exportValue: (row) => row.accountCount,
       render: (row) => `
         <button class="account-link-button" data-account-detail-key="${encodeURIComponent(row.key)}" type="button">
-          查看 ${row.accountCount} 个
+          查看 ${row.accountCount} 个账户
         </button>
       `,
     },
@@ -1273,7 +1261,8 @@ function renderFieldConfigOptions() {
 
 function accountFieldLabel(field) {
   if (field.key === "dimensionId") return state.accountDimension === "project" ? "项目ID" : "账号ID";
-  if (field.key === "name") return state.accountDimension === "project" ? "项目名称" : "账号名称";
+  if (field.key === "name") return state.accountDimension === "project" ? "项目" : "投放账户";
+  if (field.key === "accountCount") return "投放账户数量";
   return field.label;
 }
 
@@ -1559,7 +1548,7 @@ function showAccountDetailModal(encodedKey) {
   const row = rows.find((item) => item.key === key);
   if (!row) return;
   const modal = document.querySelector("#accountDetailModal");
-  document.querySelector("#accountDetailTitle").textContent = `${row.name} · 关联账户`;
+  document.querySelector("#accountDetailTitle").textContent = `${row.name} · 投放账户明细`;
   document.querySelector("#accountDetailBody").innerHTML = `
     <div class="detail-summary">
       <span><small>平台</small><strong>${escapeHtml(row.platform)}</strong></span>

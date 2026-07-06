@@ -1209,6 +1209,7 @@ button:focus-visible {
 }
 
 .account-link-button {
+  white-space: nowrap;
   min-height: 32px;
   border: 1px solid rgba(30, 64, 175, 0.24);
   border-radius: 999px;
@@ -1229,6 +1230,14 @@ button:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(30, 64, 175, 0.54);
   background: #dbe7ff;
+}
+
+.project-name-cell {
+  display: inline-block;
+  max-width: 360px;
+  color: var(--ink);
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .toggle-field input {
