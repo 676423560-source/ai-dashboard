@@ -54,12 +54,21 @@
               <span>时间维度</span>
               <select id="periodSelect">
                 <option value="day">日汇总</option>
-                <option value="month">月度汇总</option>
+                <option value="custom">自定义时间</option>
+                <option value="current-month">本月</option>
+                <option value="last-month">上月</option>
+                <option value="last-7">近7天</option>
+                <option value="last-15">近15天</option>
               </select>
             </label>
             <label class="field">
               <span id="dateFieldLabel">日期</span>
               <select id="dateSelect"></select>
+              <div class="custom-date-range" id="customDateRange" aria-label="自定义时间范围">
+                <input id="startDateInput" type="date" />
+                <span>至</span>
+                <input id="endDateInput" type="date" />
+              </div>
             </label>
             <label class="field">
               <span>直播间名称</span>

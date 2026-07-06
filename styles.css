@@ -345,6 +345,32 @@ h3 {
   padding-left: 2px;
 }
 
+.controls select.hidden {
+  display: none;
+}
+
+.custom-date-range {
+  display: none;
+  grid-template-columns: minmax(132px, 1fr) auto minmax(132px, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 300px;
+}
+
+.custom-date-range.visible {
+  display: grid;
+}
+
+.custom-date-range input {
+  width: 100%;
+}
+
+.custom-date-range span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .account-dimension-field {
   display: none;
 }
@@ -1952,6 +1978,11 @@ tbody tr.interactive-row.active {
   .dimension-picker,
   .dimension-trigger {
     width: 100%;
+  }
+
+  .custom-date-range {
+    grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .dimension-menu,

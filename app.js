@@ -106,6 +106,8 @@ const platformSpendRows = window.platformSpendRows || [];
 const liveAccountRelations = window.liveAccountRelations || [];
 const spendDates = platformSpendRows.map((row) => row.date).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
+const latestAvailableDate = latestSpendDate || dailyData[dailyData.length - 1].date;
+const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates].sort()[0] || latestAvailableDate;
 const defaultAccountFields = [
   "platform",
   "name",
@@ -114,8 +116,10 @@ const defaultAccountFields = [
 
 const state = {
   granularity: "day",
-  date: latestSpendDate || dailyData[dailyData.length - 1].date,
-  month: (latestSpendDate || dailyData[dailyData.length - 1].date).slice(0, 7),
+  date: latestAvailableDate,
+  month: latestAvailableDate.slice(0, 7),
+  customStart: earliestAvailableDate,
+  customEnd: latestAvailableDate,
   room: "all",
   platform: "all",
   accountDimension: "project",
@@ -341,6 +345,8 @@ function makeRoom(name, cost, impressions, clicks, enters, viewers, interactions
 
 function init() {
   const dateSelect = document.querySelector("#dateSelect");
+  const startDateInput = document.querySelector("#startDateInput");
+  const endDateInput = document.querySelector("#endDateInput");
   renderDateOptions();
   renderRoomOptions();
 
@@ -352,12 +358,24 @@ function init() {
   });
 
   dateSelect.addEventListener("change", (event) => {
-    if (state.granularity === "month") {
-      state.month = event.target.value;
-    } else {
-      state.date = event.target.value;
-      state.month = state.date.slice(0, 7);
-    }
+    state.date = event.target.value;
+    state.month = state.date.slice(0, 7);
+    renderAccountDimensionPicker();
+    render();
+  });
+
+  startDateInput.addEventListener("change", (event) => {
+    state.customStart = event.target.value || earliestAvailableDate;
+    if (state.customStart > state.customEnd) state.customEnd = state.customStart;
+    renderDateOptions();
+    renderAccountDimensionPicker();
+    render();
+  });
+
+  endDateInput.addEventListener("change", (event) => {
+    state.customEnd = event.target.value || latestAvailableDate;
+    if (state.customEnd < state.customStart) state.customStart = state.customEnd;
+    renderDateOptions();
     renderAccountDimensionPicker();
     render();
   });
@@ -483,18 +501,36 @@ function init() {
 
 function renderDateOptions() {
   const dateSelect = document.querySelector("#dateSelect");
+  const customDateRange = document.querySelector("#customDateRange");
+  const startDateInput = document.querySelector("#startDateInput");
+  const endDateInput = document.querySelector("#endDateInput");
   const label = document.querySelector("#dateFieldLabel");
   dateSelect.innerHTML = "";
+  dateSelect.classList.remove("hidden");
+  dateSelect.disabled = false;
+  customDateRange.classList.remove("visible");
 
-  if (state.granularity === "month") {
-    label.textContent = "月份";
-    availableMonths().forEach((month) => {
-      const option = document.createElement("option");
-      option.value = month;
-      option.textContent = formatMonth(month);
-      dateSelect.append(option);
-    });
-    dateSelect.value = state.month;
+  if (state.granularity === "custom") {
+    label.textContent = "自定义时间";
+    dateSelect.classList.add("hidden");
+    customDateRange.classList.add("visible");
+    startDateInput.min = earliestAvailableDate;
+    startDateInput.max = latestAvailableDate;
+    endDateInput.min = earliestAvailableDate;
+    endDateInput.max = latestAvailableDate;
+    startDateInput.value = state.customStart;
+    endDateInput.value = state.customEnd;
+    return;
+  }
+
+  if (state.granularity !== "day") {
+    label.textContent = "日期范围";
+    const option = document.createElement("option");
+    option.value = state.granularity;
+    option.textContent = selectedPeriodLabel();
+    dateSelect.append(option);
+    dateSelect.value = state.granularity;
+    dateSelect.disabled = true;
     return;
   }
 
@@ -613,19 +649,15 @@ function renderAccountDimensionPicker() {
 }
 
 function availableAccountProjects() {
+  const range = selectedDateRange();
   const matchPlatform = (row) => state.accountPlatform === "all" || row.platform === state.accountPlatform;
   const matchPlatformSource = (row) =>
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
   const matchRoom = (row) => state.room === "all" || selectedRoomMatchesRow(row);
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
-  const rows =
-    state.granularity === "month"
-      ? platformSpendRows.filter(
-          (row) => row.date.startsWith(state.month) && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row),
-        )
-      : platformSpendRows.filter(
-          (row) => row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row),
-        );
+  const rows = platformSpendRows.filter(
+    (row) => isDateInRange(row.date, range) && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row),
+  );
   return [...new Set(rows.map((row) => relatedProjectName(row)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
 
@@ -714,10 +746,35 @@ function selectedDay() {
 }
 
 function selectedDays() {
-  if (state.granularity === "month") {
-    return dailyData.filter((day) => day.date.startsWith(state.month));
+  const range = selectedDateRange();
+  return dailyData.filter((day) => isDateInRange(day.date, range));
+}
+
+function selectedDateRange() {
+  const latest = latestAvailableDate;
+  if (state.granularity === "day") return { start: state.date, end: state.date };
+  if (state.granularity === "custom") {
+    const start = state.customStart <= state.customEnd ? state.customStart : state.customEnd;
+    const end = state.customStart <= state.customEnd ? state.customEnd : state.customStart;
+    return { start, end };
   }
-  return [selectedDay()];
+  if (state.granularity === "current-month") {
+    return { start: `${latest.slice(0, 7)}-01`, end: latest };
+  }
+  if (state.granularity === "last-month") {
+    const [year, month] = latest.slice(0, 7).split("-").map(Number);
+    const previousMonth = new Date(year, month - 2, 1);
+    const start = formatDate(previousMonth);
+    const end = formatDate(new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0));
+    return { start, end };
+  }
+  if (state.granularity === "last-7") return { start: shiftDate(latest, -6), end: latest };
+  if (state.granularity === "last-15") return { start: shiftDate(latest, -14), end: latest };
+  return { start: state.date, end: state.date };
+}
+
+function isDateInRange(date, range) {
+  return date >= range.start && date <= range.end;
 }
 
 function selectedRooms(day = selectedDay()) {
@@ -835,8 +892,7 @@ function renderView() {
 function renderScope() {
   const roomName = selectedRoomLabel();
   const period = selectedPeriodLabel();
-  document.querySelector("#scopeType").textContent =
-    state.granularity === "month" ? "当前口径：月度汇总" : "当前口径：按天汇总";
+  document.querySelector("#scopeType").textContent = `当前口径：${periodModeLabel()}`;
   document.querySelector("#audienceScope").textContent = `${roomName} · ${platformConfig[state.platform].label} · ${period}`;
   document.querySelector("#liveScope").textContent = `${roomName} · ${period}`;
   const projectScope =
@@ -846,7 +902,7 @@ function renderScope() {
   document.querySelector("#accountScope").textContent =
     `${roomName} · ${accountPlatformLabel()} · ${state.accountDimension === "project" ? "项目维度" : "账户维度"}${projectScope} · ${period}`;
   document.querySelector("#trendTitle").textContent =
-    state.granularity === "month" ? "按月投放与直播趋势" : "按天投放与直播趋势";
+    state.granularity === "day" ? "按天投放与直播趋势" : "日期范围投放与直播趋势";
 }
 
 function selectedRoomLabel() {
@@ -863,15 +919,15 @@ function renderSummary() {
   }
 
   const data = totals();
-  const roi = data.gmv / data.cost;
-  const ctr = (data.clicks / data.impressions) * 100;
-  const conversion = (data.orders / data.enters) * 100;
-  const periodNote = state.granularity === "month" ? "本月汇总" : "+12.4% 较昨日";
+  const roi = data.cost ? data.gmv / data.cost : 0;
+  const ctr = data.impressions ? (data.clicks / data.impressions) * 100 : 0;
+  const conversion = data.enters ? (data.orders / data.enters) * 100 : 0;
+  const periodNote = state.granularity === "day" ? "+12.4% 较昨日" : periodModeLabel();
   const cards = [
     ["广告消耗", money(data.cost), periodNote],
     ["成交 GMV", money(data.gmv), `ROI ${roi.toFixed(2)}`],
     ["曝光人数", compact(data.impressions), `点击率 ${ctr.toFixed(2)}%`],
-    ["直播间进入", compact(data.enters), `进入率 ${((data.enters / data.clicks) * 100).toFixed(1)}%`],
+    ["直播间进入", compact(data.enters), `进入率 ${(data.clicks ? (data.enters / data.clicks) * 100 : 0).toFixed(1)}%`],
     ["成交订单", compact(data.orders), `转化率 ${conversion.toFixed(1)}%`],
   ];
 
@@ -921,18 +977,22 @@ function renderSpendSummary() {
 
 function renderTrend() {
   const buckets = trendBuckets();
+  const chart = document.querySelector("#trendChart");
+  if (!buckets.length) {
+    chart.innerHTML = `<text class="axis-label" x="380" y="155" text-anchor="middle">当前时间范围暂无趋势数据</text>`;
+    return;
+  }
   const values = buckets.map((bucket) => {
     const data = bucket.data;
-    if (state.metric === "roi") return +(data.gmv / data.cost).toFixed(2);
+    if (state.metric === "roi") return data.cost ? +(data.gmv / data.cost).toFixed(2) : 0;
     return data[state.metric];
   });
 
   const labels = buckets.map((bucket) => bucket.label);
-  const chart = document.querySelector("#trendChart");
   const width = 760;
   const height = 310;
   const pad = { top: 24, right: 24, bottom: 42, left: 58 };
-  const max = Math.max(...values) * 1.12;
+  const max = Math.max(...values, 1) * 1.12;
   const min = state.metric === "roi" ? Math.min(...values) * 0.92 : 0;
   const points = values.map((value, index) => {
     const x = pad.left + (index * (width - pad.left - pad.right)) / Math.max(values.length - 1, 1);
@@ -1514,6 +1574,7 @@ function exportAccountCsv() {
 }
 
 function spendRowsForPeriod() {
+  const range = selectedDateRange();
   const matchPlatform = (row) => state.accountPlatform === "all" || row.platform === state.accountPlatform;
   const matchPlatformSource = (row) =>
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
@@ -1521,20 +1582,14 @@ function spendRowsForPeriod() {
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
   const matchProject = (row) =>
     state.accountDimension !== "project" || state.accountProject === "all" || relatedProjectName(row) === state.accountProject;
-  if (state.granularity === "month") {
-    return platformSpendRows.filter(
-      (row) =>
-        row.date.startsWith(state.month) &&
-        matchPlatform(row) &&
-        matchPlatformSource(row) &&
-        matchRoom(row) &&
-        matchSpend(row) &&
-        matchProject(row),
-    );
-  }
   return platformSpendRows.filter(
     (row) =>
-      row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row) && matchProject(row),
+      isDateInRange(row.date, range) &&
+      matchPlatform(row) &&
+      matchPlatformSource(row) &&
+      matchRoom(row) &&
+      matchSpend(row) &&
+      matchProject(row),
   );
 }
 
@@ -1861,28 +1916,33 @@ function selectedRoomSummaries() {
 }
 
 function trendBuckets() {
-  if (state.granularity === "month") {
-    return availableMonths().map((month) => {
-      const monthDays = dailyData.filter((day) => day.date.startsWith(month));
-      const data = monthDays.reduce(
-        (sum, day) => {
-          const dayTotals = totals(day);
-          Object.keys(sum).forEach((key) => {
-            sum[key] += dayTotals[key] || 0;
-          });
-          return sum;
-        },
-        { cost: 0, impressions: 0, clicks: 0, enters: 0, viewers: 0, interactions: 0, orders: 0, gmv: 0 },
-      );
-      return { label: month.slice(5), data };
-    });
-  }
-
-  return dailyData.map((day) => ({ label: day.date.slice(5), data: totals(day) }));
+  const range = state.granularity === "day" ? { start: dailyData[0].date, end: latestAvailableDate } : selectedDateRange();
+  return dailyData.filter((day) => isDateInRange(day.date, range)).map((day) => ({ label: day.date.slice(5), data: totals(day) }));
 }
 
 function selectedPeriodLabel() {
-  return state.granularity === "month" ? formatMonth(state.month) : state.date;
+  if (state.granularity === "day") return state.date;
+  const range = selectedDateRange();
+  const labels = {
+    custom: "自定义时间",
+    "current-month": "本月",
+    "last-month": "上月",
+    "last-7": "近7天",
+    "last-15": "近15天",
+  };
+  return `${labels[state.granularity] || "日期范围"} · ${range.start} 至 ${range.end}`;
+}
+
+function periodModeLabel() {
+  const labels = {
+    day: "按天汇总",
+    custom: "自定义时间",
+    "current-month": "本月",
+    "last-month": "上月",
+    "last-7": "近7天",
+    "last-15": "近15天",
+  };
+  return labels[state.granularity] || "日期范围";
 }
 
 function accountPlatformLabel() {
@@ -1896,6 +1956,19 @@ function accountPlatformLabel() {
 function formatMonth(month) {
   const [year, value] = month.split("-");
   return `${year}年${value}月`;
+}
+
+function shiftDate(date, dayOffset) {
+  const target = new Date(`${date}T00:00:00`);
+  target.setDate(target.getDate() + dayOffset);
+  return formatDate(target);
+}
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function barRow(label, value, width, color) {
