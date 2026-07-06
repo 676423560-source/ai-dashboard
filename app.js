@@ -190,6 +190,13 @@ const accountRelationByPlatformId = liveAccountRelations.reduce((output, item) =
   return output;
 }, new Map());
 
+const projectRelationByPlatformId = liveAccountRelations.reduce((output, item) => {
+  const platform = normalizeValue(item.platform);
+  const projectId = normalizeValue(item.projectId);
+  if (platform && projectId) output.set(`${platform}::${projectId}`, item);
+  return output;
+}, new Map());
+
 function normalizeValue(value) {
   return String(value ?? "").trim();
 }
@@ -197,6 +204,11 @@ function normalizeValue(value) {
 function accountRelationFor(row) {
   const platform = normalizeValue(row.platform);
   const accountId = normalizeValue(row.accountId);
+  const projectId = normalizeValue(row.projectId);
+  if (platform && projectId) {
+    const projectRelation = projectRelationByPlatformId.get(`${platform}::${projectId}`);
+    if (projectRelation) return projectRelation;
+  }
   return accountRelationByPlatformId.get(`${platform}::${accountId}`) || null;
 }
 
