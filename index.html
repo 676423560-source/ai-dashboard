@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI人群画像看板</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主目录">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">AI</span>
+          <div>
+            <strong>AI人群画像看板</strong>
+            <span>投放数据工作台</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-view="audience" type="button">
+            <span aria-hidden="true">01</span>
+            <strong>人群画像</strong>
+          </button>
+          <button class="nav-item" data-view="live" type="button">
+            <span aria-hidden="true">02</span>
+            <strong>直播间基础数据</strong>
+          </button>
+          <button class="nav-item" data-view="account" type="button">
+            <span aria-hidden="true">03</span>
+            <strong>全平台账户消耗明细</strong>
+          </button>
+          <button class="nav-item" data-view="connect" type="button">
+            <span aria-hidden="true">04</span>
+            <strong>数据接入</strong>
+          </button>
+        </nav>
+
+        <section class="sync-panel" aria-label="数据同步状态">
+          <span>数据状态</span>
+          <strong>路径确认中</strong>
+          <p>巨量引擎、抖店罗盘、小红书、视频号等待正式授权和下载口径确认。</p>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">AD LIVE INTELLIGENCE</p>
+            <h1>广告投放人群与直播间数据看板</h1>
+          </div>
+          <section class="controls" aria-label="筛选条件">
+            <label class="field">
+              <span>时间维度</span>
+              <select id="periodSelect">
+                <option value="day">日汇总</option>
+                <option value="month">月度汇总</option>
+              </select>
+            </label>
+            <label class="field">
+              <span id="dateFieldLabel">日期</span>
+              <select id="dateSelect"></select>
+            </label>
+            <label class="field">
+              <span>直播间</span>
+              <select id="roomSelect">
+                <option value="all">全部直播间</option>
+                <option value="beauty">美妆个护专场</option>
+                <option value="fashion">轻奢穿搭专场</option>
+                <option value="food">健康食品专场</option>
+              </select>
+            </label>
+            <label class="field account-dimension-field" id="accountDimensionField">
+              <span>查看维度</span>
+              <div class="dimension-picker" id="accountDimensionPicker">
+                <button class="dimension-trigger" id="accountDimensionTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span id="accountDimensionText">项目维度</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <div class="dimension-menu" id="accountDimensionMenu" role="menu"></div>
+              </div>
+            </label>
+            <label class="field account-dimension-field" id="accountPlatformField">
+              <span>投放平台</span>
+              <div class="dimension-picker" id="accountPlatformPicker">
+                <button class="dimension-trigger" id="accountPlatformTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span id="accountPlatformText">全部平台</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <div class="dimension-menu" id="accountPlatformMenu" role="menu"></div>
+              </div>
+            </label>
+            <button class="icon-button" id="refreshButton" type="button" title="刷新数据" aria-label="刷新数据">
+              <span aria-hidden="true">R</span>
+            </button>
+          </section>
+        </header>
+
+        <section class="status-row" aria-label="数据概览状态">
+          <span id="scopeType">当前口径：按天汇总</span>
+          <span>投放平台：小红书 / 视频号 / 巨量引擎</span>
+          <span>直播链路：曝光-点击-进入-成交</span>
+        </section>
+
+        <section class="summary-strip" id="summaryCards" aria-label="核心指标"></section>
+
+        <section class="view-section active" data-section="audience" aria-label="人群画像">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">AUDIENCE PROFILE</p>
+              <h2>人群画像</h2>
+            </div>
+            <div class="section-actions">
+              <label class="field compact-field">
+                <span>投放平台</span>
+                <select id="platformSelect">
+                  <option value="all">全部平台</option>
+                  <option value="xiaohongshu">小红书</option>
+                  <option value="wechat">视频号</option>
+                  <option value="juliang">巨量引擎</option>
+                </select>
+              </label>
+              <span id="audienceScope">全部直播间 · 全部平台 · 2026-07-03</span>
+            </div>
+          </div>
+
+          <section class="audience-layout">
+            <section class="panel audience-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">GENDER</p>
+                  <h3>性别结构</h3>
+                </div>
+                <span class="panel-badge">画像核心</span>
+              </div>
+              <div class="audience-grid">
+                <div class="donut-shell">
+                  <div class="donut" id="genderDonut"></div>
+                  <div>
+                    <strong id="mainGender">女性 68%</strong>
+                    <span>主力性别</span>
+                  </div>
+                </div>
+                <div class="profile-list" id="profileList"></div>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">SEGMENTS</p>
+                  <h3>高价值人群</h3>
+                </div>
+              </div>
+              <div class="segment-list" id="segmentList"></div>
+            </section>
+
+            <section class="panel panel-wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">DISTRIBUTION</p>
+                  <h3>画像分布明细</h3>
+                </div>
+              </div>
+              <div class="profile-breakdown" id="profileBreakdown"></div>
+            </section>
+          </section>
+        </section>
+
+        <section class="view-section" data-section="live" aria-label="直播间基础数据">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">LIVE ROOM DATA</p>
+              <h2>直播间基础数据</h2>
+            </div>
+            <span id="liveScope">全部直播间 · 2026-07-03</span>
+          </div>
+
+          <section class="layout-grid">
+            <section class="panel panel-large trend-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">DAILY TREND</p>
+                  <h3 id="trendTitle">按天投放与直播趋势</h3>
+                </div>
+                <div class="metric-tabs" role="tablist" aria-label="趋势指标">
+                  <button class="metric-tab active" data-metric="gmv" type="button">GMV</button>
+                  <button class="metric-tab" data-metric="cost" type="button">消耗</button>
+                  <button class="metric-tab" data-metric="roi" type="button">ROI</button>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <svg id="trendChart" viewBox="0 0 760 310" role="img" aria-label="趋势折线图"></svg>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">LIVE SNAPSHOT</p>
+                  <h3>基础数据</h3>
+                </div>
+              </div>
+              <div class="live-kpi-list" id="liveKpiList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">FUNNEL</p>
+                  <h3>直播间转化漏斗</h3>
+                </div>
+              </div>
+              <div class="funnel" id="funnel"></div>
+            </section>
+
+            <section class="panel panel-wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">ROOM DETAIL</p>
+                  <h3>直播间数据明细</h3>
+                </div>
+                <button class="text-button" id="exportButton" type="button">导出 CSV</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>直播间</th>
+                      <th>曝光</th>
+                      <th>点击率</th>
+                      <th>进入率</th>
+                      <th>成交 GMV</th>
+                      <th>ROI</th>
+                      <th>客单价</th>
+                      <th>建议</th>
+                    </tr>
+                  </thead>
+                  <tbody id="roomTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <section class="view-section" data-section="account" aria-label="全平台账户消耗明细">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">ACCOUNT SPEND</p>
+              <h2>全平台账户消耗明细</h2>
+            </div>
+            <span id="accountScope">全部直播间 · 2026-07-03</span>
+          </div>
+
+          <section class="account-layout">
+            <section class="panel panel-wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">PLATFORM SUMMARY</p>
+                  <h3>平台账户汇总</h3>
+                </div>
+              </div>
+              <div class="insight-strip" id="accountInsights" aria-label="账户消耗洞察"></div>
+              <div class="account-summary" id="accountSummary"></div>
+            </section>
+
+            <section class="panel panel-wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">ACCOUNT DATA</p>
+                  <h3>账号数据明细</h3>
+                </div>
+                <div class="panel-actions">
+                  <button class="text-button" id="fieldConfigButton" type="button">配置字段</button>
+                  <button class="text-button" id="exportAccountButton" type="button">导出账户 CSV</button>
+                </div>
+              </div>
+              <div class="account-toolbar" aria-label="账户明细筛选">
+                <label class="search-field">
+                  <span>搜索</span>
+                  <input id="accountSearchInput" type="search" placeholder="项目 / 账户 / 来源" autocomplete="off" />
+                </label>
+                <label class="field compact-field">
+                  <span>排序</span>
+                  <select id="accountSortSelect">
+                    <option value="cost-desc">消耗从高到低</option>
+                    <option value="cost-asc">消耗从低到高</option>
+                    <option value="name">名称 A-Z</option>
+                    <option value="platform">平台分组</option>
+                  </select>
+                </label>
+                <label class="toggle-field">
+                  <input id="accountPositiveOnly" type="checkbox" />
+                  <span>只看有消耗</span>
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table class="account-table">
+                  <thead id="accountTableHead"></thead>
+                  <tbody id="accountTable"></tbody>
+                </table>
+              </div>
+              <aside class="account-drilldown" id="accountDrilldown" aria-live="polite"></aside>
+            </section>
+          </section>
+        </section>
+
+        <section class="view-section" data-section="connect" aria-label="数据接入">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">DATA ACCESS</p>
+              <h2>数据接入</h2>
+            </div>
+            <span>平台授权与下载路径确认</span>
+          </div>
+
+          <section class="connect-grid">
+            <section class="panel panel-large">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">PLATFORM</p>
+                  <h3>平台接入状态</h3>
+                </div>
+              </div>
+              <div class="access-grid" id="accessGrid"></div>
+            </section>
+
+            <section class="panel route-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">NEXT</p>
+                  <h3>巨量引擎路径</h3>
+                </div>
+              </div>
+              <ol class="route-list">
+                <li><span>1</span><strong>抖店后台</strong><em>已确认入口</em></li>
+                <li><span>2</span><strong>电商罗盘首页</strong><em>已确认入口</em></li>
+                <li><span>3</span><strong>直播概览</strong><em>继续确认明细口径</em></li>
+              </ol>
+            </section>
+          </section>
+        </section>
+      </main>
+    </div>
+    <div class="detail-modal" id="accountDetailModal" aria-hidden="true">
+      <div class="detail-modal-backdrop" data-close-account-detail></div>
+      <section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="accountDetailTitle">
+        <div class="detail-dialog-head">
+          <div>
+            <p class="eyebrow">ACCOUNT LIST</p>
+            <h3 id="accountDetailTitle">关联账户明细</h3>
+          </div>
+          <button class="icon-button" id="closeAccountDetail" type="button" aria-label="关闭账户明细">X</button>
+        </div>
+        <div class="detail-dialog-body" id="accountDetailBody"></div>
+      </section>
+    </div>
+    <div class="detail-modal" id="fieldConfigModal" aria-hidden="true">
+      <div class="detail-modal-backdrop" data-close-field-config></div>
+      <section class="detail-dialog field-dialog" role="dialog" aria-modal="true" aria-labelledby="fieldConfigTitle">
+        <div class="detail-dialog-head">
+          <div>
+            <p class="eyebrow">FIELD CONFIG</p>
+            <h3 id="fieldConfigTitle">配置账号数据字段</h3>
+          </div>
+          <button class="icon-button" id="closeFieldConfig" type="button" aria-label="关闭字段配置">X</button>
+        </div>
+        <div class="field-preset-row" aria-label="字段快捷方案">
+          <button class="text-button" id="basicFieldPreset" type="button">基础视图</button>
+          <button class="text-button" id="performanceFieldPreset" type="button">效果指标</button>
+        </div>
+        <div class="field-config-grid" id="fieldConfigBody"></div>
+        <div class="dialog-actions">
+          <button class="text-button" id="resetFieldConfig" type="button">恢复默认</button>
+          <button class="text-button primary-action" id="applyFieldConfig" type="button">完成</button>
+        </div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="./platform-spend-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
