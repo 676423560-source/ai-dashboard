@@ -371,6 +371,7 @@ function init() {
 
   document.querySelector("#platformSelect").addEventListener("change", (event) => {
     state.platform = event.target.value;
+    renderRoomOptions();
     render();
   });
 
@@ -509,22 +510,64 @@ function renderDateOptions() {
 
 function renderRoomOptions() {
   const roomSelect = document.querySelector("#roomSelect");
-  const roomNames = liveRoomOptions();
+  const rooms = liveRoomOptions();
   roomSelect.innerHTML = [
     `<option value="all">全部直播间</option>`,
-    ...roomNames.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`),
+    ...rooms.map((room) => `<option value="${escapeHtml(room.value)}">${escapeHtml(room.label)}</option>`),
   ].join("");
-  if (state.room !== "all" && !roomNames.includes(state.room)) {
+  if (state.room !== "all" && !rooms.some((room) => room.value === state.room)) {
     state.room = "all";
   }
   roomSelect.value = state.room;
 }
 
 function liveRoomOptions() {
-  const names = liveAccountRelations
-    .map((item) => normalizeValue(item.liveRoomName))
-    .filter(Boolean);
-  return [...new Set(names)].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  const platform = currentRoomPlatformFilter();
+  const roomMap = liveAccountRelations.reduce((output, item) => {
+    const liveRoomName = normalizeValue(item.liveRoomName);
+    const itemPlatform = normalizeValue(item.platform);
+    if (!liveRoomName || !itemPlatform || isProjectLikeRoomName(liveRoomName, item)) return output;
+    if (platform !== "all" && itemPlatform !== platform) return output;
+    const value = roomOptionValue(itemPlatform, liveRoomName);
+    output.set(value, {
+      value,
+      name: liveRoomName,
+      platform: itemPlatform,
+      label: `${liveRoomName}（${itemPlatform}）`,
+    });
+    return output;
+  }, new Map());
+  return [...roomMap.values()].sort(
+    (a, b) => a.platform.localeCompare(b.platform, "zh-CN") || a.name.localeCompare(b.name, "zh-CN"),
+  );
+}
+
+function currentRoomPlatformFilter() {
+  if (state.view === "account") return state.accountPlatform;
+  const platformMap = {
+    all: "all",
+    xiaohongshu: "小红书",
+    wechat: "视频号",
+    juliang: "巨量引擎",
+  };
+  return platformMap[state.platform] || "all";
+}
+
+function isProjectLikeRoomName(name, item) {
+  const projectName = normalizeValue(item.projectName);
+  return name === projectName || /项目$/.test(name);
+}
+
+function roomOptionValue(platform, name) {
+  return `${platform}::${name}`;
+}
+
+function selectedRoomInfo() {
+  if (state.room === "all") return null;
+  const [platform, ...nameParts] = state.room.split("::");
+  const name = nameParts.join("::");
+  if (!platform || !name) return null;
+  return { platform, name, label: `${name}（${platform}）` };
 }
 
 function availableMonths() {
@@ -573,14 +616,15 @@ function availableAccountProjects() {
   const matchPlatform = (row) => state.accountPlatform === "all" || row.platform === state.accountPlatform;
   const matchPlatformSource = (row) =>
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
+  const matchRoom = (row) => state.room === "all" || selectedRoomMatchesRow(row);
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
   const rows =
     state.granularity === "month"
       ? platformSpendRows.filter(
-          (row) => row.date.startsWith(state.month) && matchPlatform(row) && matchPlatformSource(row) && matchSpend(row),
+          (row) => row.date.startsWith(state.month) && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row),
         )
       : platformSpendRows.filter(
-          (row) => row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchSpend(row),
+          (row) => row.date === state.date && matchPlatform(row) && matchPlatformSource(row) && matchRoom(row) && matchSpend(row),
         );
   return [...new Set(rows.map((row) => relatedProjectName(row)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
@@ -658,6 +702,7 @@ function selectAccountPlatform(platform, source = "all") {
   state.selectedAccountKey = "";
   closePlatformMenu();
   renderAccountPlatformPicker();
+  renderRoomOptions();
   renderAccountDimensionPicker();
   renderSummary();
   renderAccountDetails();
@@ -679,6 +724,12 @@ function selectedRooms(day = selectedDay()) {
   if (state.room === "all") return Object.values(day.rooms);
   if (day.rooms[state.room]) return [day.rooms[state.room]];
   return Object.values(day.rooms);
+}
+
+function selectedRoomMatchesRow(row) {
+  const room = selectedRoomInfo();
+  if (!room) return true;
+  return row.platform === room.platform && relatedLiveRoomName(row) === room.name;
 }
 
 function totals(day) {
@@ -753,6 +804,7 @@ function weightedProfile(field) {
 
 function render() {
   renderView();
+  renderRoomOptions();
   renderAccountDimensionPicker();
   renderAccountPlatformPicker();
   renderScope();
@@ -799,6 +851,8 @@ function renderScope() {
 
 function selectedRoomLabel() {
   if (state.room === "all") return "全部直播间";
+  const room = selectedRoomInfo();
+  if (room) return room.label;
   return selectedDay().rooms[state.room]?.name || state.room;
 }
 
@@ -1463,7 +1517,7 @@ function spendRowsForPeriod() {
   const matchPlatform = (row) => state.accountPlatform === "all" || row.platform === state.accountPlatform;
   const matchPlatformSource = (row) =>
     state.accountPlatform !== "小红书" || state.accountPlatformSource === "all" || row.rawPlatform === state.accountPlatformSource;
-  const matchRoom = (row) => state.room === "all" || relatedLiveRoomName(row) === state.room;
+  const matchRoom = (row) => state.room === "all" || selectedRoomMatchesRow(row);
   const matchSpend = (row) => !state.accountPositiveOnly || row.spend > 0;
   const matchProject = (row) =>
     state.accountDimension !== "project" || state.accountProject === "all" || relatedProjectName(row) === state.accountProject;
@@ -1778,7 +1832,7 @@ function statusClass(status) {
 }
 
 function selectedRoomSummaries() {
-  const roomKeys = state.room === "all" || !selectedDay().rooms[state.room] ? Object.keys(selectedDay().rooms) : [state.room];
+  const roomKeys = state.room === "all" || selectedRoomInfo() || !selectedDay().rooms[state.room] ? Object.keys(selectedDay().rooms) : [state.room];
   return roomKeys.map((key) => {
     const rooms = selectedDays().map((day) => day.rooms[key]);
     const summary = rooms.reduce(
