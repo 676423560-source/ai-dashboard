@@ -136,7 +136,7 @@ const state = {
   accountPositiveOnly: false,
   accountVisibleFields: [...defaultAccountFields],
   selectedAccountKey: "",
-  metric: "gmv",
+  metric: "cost",
   view: "audience",
 };
 
@@ -1135,7 +1135,8 @@ function renderTrend() {
   const values = buckets.map((bucket) => {
     const data = bucket.data;
     if (state.metric === "roi") return data.cost ? +(data.gmv / data.cost).toFixed(2) : 0;
-    return data[state.metric];
+    if (state.metric === "orderCost") return data.orders ? +(data.cost / data.orders).toFixed(2) : 0;
+    return data[state.metric] || 0;
   });
 
   const labels = buckets.map((bucket) => bucket.label);
@@ -1149,6 +1150,8 @@ function renderTrend() {
     const y = height - pad.bottom - ((value - min) / (max - min)) * (height - pad.top - pad.bottom);
     return [x, y, value];
   });
+  const topValue = Math.max(...values, 0);
+  const labelStep = Math.max(1, Math.ceil(values.length / 12));
   const line = points.map(([x, y]) => `${x},${y}`).join(" ");
   const area = `${pad.left},${height - pad.bottom} ${line} ${width - pad.right},${height - pad.bottom}`;
 
@@ -1159,8 +1162,16 @@ function renderTrend() {
       .map(
         ([x, y, value], index) => `
           <circle class="chart-dot" cx="${x}" cy="${y}" r="5"></circle>
-          <text class="axis-label" x="${x}" y="${height - 16}" text-anchor="middle">${labels[index]}</text>
-          <text class="axis-label" x="${x}" y="${y - 12}" text-anchor="middle">${formatMetric(value)}</text>
+          ${
+            values.length <= 12 || index % labelStep === 0 || index === values.length - 1
+              ? `<text class="axis-label" x="${x}" y="${height - 16}" text-anchor="middle">${labels[index]}</text>`
+              : ""
+          }
+          ${
+            value > 0 && (values.length <= 12 || index % labelStep === 0 || value === topValue)
+              ? `<text class="axis-label" x="${x}" y="${y - 12}" text-anchor="middle">${formatMetric(value)}</text>`
+              : ""
+          }
         `,
       )
       .join("")}
@@ -2385,6 +2396,7 @@ function clamp(value, min, max) {
 
 function formatMetric(value) {
   if (state.metric === "roi") return value.toFixed(2);
+  if (state.metric === "cost" || state.metric === "orderCost") return money(value);
   return value >= 10000 ? `${(value / 10000).toFixed(1)}万` : String(Math.round(value));
 }
 
