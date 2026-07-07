@@ -352,7 +352,7 @@ h3 {
 .custom-date-range {
   display: none;
   position: relative;
-  min-width: 290px;
+  min-width: min(320px, 100%);
 }
 
 .custom-date-range.visible {
@@ -396,11 +396,12 @@ h3 {
 .date-range-popover {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  right: 0;
   z-index: 320;
   display: none;
-  grid-template-columns: 132px minmax(320px, 1fr);
-  width: min(560px, calc(100vw - 36px));
+  grid-template-columns: 128px minmax(0, 1fr);
+  width: min(520px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
   border: 1px solid rgba(148, 163, 184, 0.26);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.94);
@@ -448,6 +449,7 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   padding: 14px;
+  min-width: 0;
 }
 
 .date-range-panel label {
@@ -460,6 +462,7 @@ h3 {
 
 .date-range-panel input {
   width: 100%;
+  min-width: 0;
   min-height: 42px;
   cursor: pointer;
 }
@@ -470,6 +473,23 @@ h3 {
   justify-content: flex-end;
   gap: 8px;
   padding-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .date-range-popover {
+    grid-template-columns: 1fr;
+    width: min(360px, calc(100vw - 48px));
+  }
+
+  .date-shortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .date-range-panel {
+    grid-template-columns: 1fr;
+  }
 }
 
 .account-dimension-field {
