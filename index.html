@@ -65,9 +65,34 @@
               <span id="dateFieldLabel">日期</span>
               <select id="dateSelect"></select>
               <div class="custom-date-range" id="customDateRange" aria-label="自定义时间范围">
-                <input id="startDateInput" type="date" />
-                <span>至</span>
-                <input id="endDateInput" type="date" />
+                <button class="date-range-trigger" id="dateRangeTrigger" type="button" aria-haspopup="dialog" aria-expanded="false">
+                  <span id="dateRangeText">选择日期范围</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="选择日期范围">
+                  <div class="date-shortcuts" aria-label="快捷日期">
+                    <button type="button" data-range-shortcut="today">今天</button>
+                    <button type="button" data-range-shortcut="yesterday">昨天</button>
+                    <button type="button" data-range-shortcut="last-7">近7天</button>
+                    <button type="button" data-range-shortcut="last-15">近15天</button>
+                    <button type="button" data-range-shortcut="current-month">本月</button>
+                    <button type="button" data-range-shortcut="last-month">上月</button>
+                  </div>
+                  <div class="date-range-panel">
+                    <label>
+                      <span>开始日期</span>
+                      <input id="startDateInput" type="date" />
+                    </label>
+                    <label>
+                      <span>结束日期</span>
+                      <input id="endDateInput" type="date" />
+                    </label>
+                    <div class="date-range-actions">
+                      <button class="text-button" id="cancelDateRange" type="button">取消</button>
+                      <button class="text-button primary-action" id="applyDateRange" type="button">应用</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </label>
             <label class="field">

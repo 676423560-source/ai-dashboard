@@ -299,9 +299,9 @@ h3 {
 .controls {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
   align-items: end;
-  flex-wrap: wrap;
-  justify-content: flex-end;
   max-width: min(100%, 980px);
   gap: 12px;
   border: 1px solid rgba(255, 255, 255, 0.72);
@@ -333,7 +333,7 @@ h3 {
 .controls .field {
   position: relative;
   z-index: 1;
-  min-width: 172px;
+  min-width: 0;
 }
 
 .controls .field:has(.dimension-picker.open),
@@ -351,24 +351,125 @@ h3 {
 
 .custom-date-range {
   display: none;
-  grid-template-columns: minmax(132px, 1fr) auto minmax(132px, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-width: 300px;
+  position: relative;
+  min-width: 290px;
 }
 
 .custom-date-range.visible {
+  display: block;
+}
+
+.date-range-trigger {
   display: grid;
-}
-
-.custom-date-range input {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
   width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 251, 255, 0.78)),
+    #ffffff;
+  color: var(--ink);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.18s var(--ease-out),
+    box-shadow 0.18s var(--ease-out),
+    transform 0.18s var(--ease-out);
 }
 
-.custom-date-range span {
+.date-range-trigger:hover,
+.date-range-trigger:focus-visible,
+.custom-date-range.open .date-range-trigger {
+  border-color: rgba(37, 99, 235, 0.46);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1), var(--shadow-sm);
+  outline: none;
+}
+
+.date-range-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 320;
+  display: none;
+  grid-template-columns: 132px minmax(320px, 1fr);
+  width: min(560px, calc(100vw - 36px));
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  backdrop-filter: blur(28px) saturate(170%);
+}
+
+.custom-date-range.open .date-range-popover {
+  display: grid;
+  animation: menuLift 0.18s var(--ease-out);
+}
+
+.date-shortcuts {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  border-right: 1px solid var(--line);
+  background: rgba(248, 251, 255, 0.72);
+  padding: 10px;
+}
+
+.date-shortcuts button {
+  min-height: 36px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 0 10px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.date-shortcuts button:hover,
+.date-shortcuts button:focus-visible {
+  background: var(--primary-soft);
+  color: var(--primary);
+  outline: none;
+}
+
+.date-range-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+}
+
+.date-range-panel label {
+  display: grid;
+  gap: 6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
+}
+
+.date-range-panel input {
+  width: 100%;
+  min-height: 42px;
+  cursor: pointer;
+}
+
+.date-range-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .account-dimension-field {
@@ -1913,6 +2014,11 @@ tbody tr.interactive-row.active {
     padding: 24px 18px 36px;
   }
 
+  .controls {
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+    max-width: 100%;
+  }
+
   .summary-strip,
   .layout-grid,
   .audience-layout,
@@ -1983,6 +2089,25 @@ tbody tr.interactive-row.active {
   .custom-date-range {
     grid-template-columns: 1fr;
     min-width: 0;
+  }
+
+  .date-range-popover {
+    position: fixed;
+    top: 96px;
+    left: 14px;
+    right: 14px;
+    width: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .date-shortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .date-range-panel {
+    grid-template-columns: 1fr;
   }
 
   .dimension-menu,

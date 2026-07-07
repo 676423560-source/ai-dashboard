@@ -120,6 +120,8 @@ const state = {
   month: latestAvailableDate.slice(0, 7),
   customStart: earliestAvailableDate,
   customEnd: latestAvailableDate,
+  pendingStart: earliestAvailableDate,
+  pendingEnd: latestAvailableDate,
   room: "all",
   platform: "all",
   accountDimension: "project",
@@ -347,6 +349,7 @@ function init() {
   const dateSelect = document.querySelector("#dateSelect");
   const startDateInput = document.querySelector("#startDateInput");
   const endDateInput = document.querySelector("#endDateInput");
+  const dateRangeTrigger = document.querySelector("#dateRangeTrigger");
   renderDateOptions();
   renderRoomOptions();
 
@@ -365,19 +368,30 @@ function init() {
   });
 
   startDateInput.addEventListener("change", (event) => {
-    state.customStart = event.target.value || earliestAvailableDate;
-    if (state.customStart > state.customEnd) state.customEnd = state.customStart;
-    renderDateOptions();
-    renderAccountDimensionPicker();
-    render();
+    state.pendingStart = event.target.value || earliestAvailableDate;
+    if (state.pendingStart > state.pendingEnd) {
+      state.pendingEnd = state.pendingStart;
+      endDateInput.value = state.pendingEnd;
+    }
   });
 
   endDateInput.addEventListener("change", (event) => {
-    state.customEnd = event.target.value || latestAvailableDate;
-    if (state.customEnd < state.customStart) state.customStart = state.customEnd;
-    renderDateOptions();
-    renderAccountDimensionPicker();
-    render();
+    state.pendingEnd = event.target.value || latestAvailableDate;
+    if (state.pendingEnd < state.pendingStart) {
+      state.pendingStart = state.pendingEnd;
+      startDateInput.value = state.pendingStart;
+    }
+  });
+
+  dateRangeTrigger.addEventListener("click", () => toggleDateRangePopover());
+  document.querySelector("#applyDateRange").addEventListener("click", applyCustomDateRange);
+  document.querySelector("#cancelDateRange").addEventListener("click", closeDateRangePopover);
+  document.querySelectorAll("[data-range-shortcut]").forEach((button) => {
+    button.addEventListener("click", () => applyDateShortcut(button.dataset.rangeShortcut));
+  });
+  [startDateInput, endDateInput].forEach((input) => {
+    input.addEventListener("click", () => openNativeDatePicker(input));
+    input.addEventListener("focus", () => openNativeDatePicker(input));
   });
 
   document.querySelector("#roomSelect").addEventListener("change", (event) => {
@@ -416,6 +430,7 @@ function init() {
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#accountDimensionPicker")) closeDimensionMenu();
     if (!event.target.closest("#accountPlatformPicker")) closePlatformMenu();
+    if (!event.target.closest("#customDateRange")) closeDateRangePopover();
   });
 
   document.querySelector("#accountPlatformTrigger").addEventListener("click", () => {
@@ -504,6 +519,7 @@ function renderDateOptions() {
   const customDateRange = document.querySelector("#customDateRange");
   const startDateInput = document.querySelector("#startDateInput");
   const endDateInput = document.querySelector("#endDateInput");
+  const dateRangeText = document.querySelector("#dateRangeText");
   const label = document.querySelector("#dateFieldLabel");
   dateSelect.innerHTML = "";
   dateSelect.classList.remove("hidden");
@@ -520,6 +536,9 @@ function renderDateOptions() {
     endDateInput.max = latestAvailableDate;
     startDateInput.value = state.customStart;
     endDateInput.value = state.customEnd;
+    state.pendingStart = state.customStart;
+    state.pendingEnd = state.customEnd;
+    dateRangeText.textContent = `${formatDisplayDate(state.customStart)} ~ ${formatDisplayDate(state.customEnd)}`;
     return;
   }
 
@@ -542,6 +561,52 @@ function renderDateOptions() {
     dateSelect.append(option);
   });
   dateSelect.value = state.date;
+}
+
+function toggleDateRangePopover() {
+  const customDateRange = document.querySelector("#customDateRange");
+  const trigger = document.querySelector("#dateRangeTrigger");
+  const isOpen = customDateRange.classList.toggle("open");
+  trigger.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) {
+    state.pendingStart = state.customStart;
+    state.pendingEnd = state.customEnd;
+    document.querySelector("#startDateInput").value = state.pendingStart;
+    document.querySelector("#endDateInput").value = state.pendingEnd;
+  }
+}
+
+function closeDateRangePopover() {
+  const customDateRange = document.querySelector("#customDateRange");
+  const trigger = document.querySelector("#dateRangeTrigger");
+  customDateRange.classList.remove("open");
+  trigger.setAttribute("aria-expanded", "false");
+}
+
+function applyCustomDateRange() {
+  state.customStart = state.pendingStart <= state.pendingEnd ? state.pendingStart : state.pendingEnd;
+  state.customEnd = state.pendingStart <= state.pendingEnd ? state.pendingEnd : state.pendingStart;
+  closeDateRangePopover();
+  renderDateOptions();
+  renderAccountDimensionPicker();
+  render();
+}
+
+function applyDateShortcut(shortcut) {
+  const range = dateRangeForMode(shortcut);
+  state.pendingStart = range.start;
+  state.pendingEnd = range.end;
+  document.querySelector("#startDateInput").value = range.start;
+  document.querySelector("#endDateInput").value = range.end;
+  applyCustomDateRange();
+}
+
+function openNativeDatePicker(input) {
+  try {
+    input.showPicker?.();
+  } catch {
+    input.focus();
+  }
 }
 
 function renderRoomOptions() {
@@ -751,25 +816,34 @@ function selectedDays() {
 }
 
 function selectedDateRange() {
-  const latest = latestAvailableDate;
   if (state.granularity === "day") return { start: state.date, end: state.date };
   if (state.granularity === "custom") {
     const start = state.customStart <= state.customEnd ? state.customStart : state.customEnd;
     const end = state.customStart <= state.customEnd ? state.customEnd : state.customStart;
     return { start, end };
   }
-  if (state.granularity === "current-month") {
+  return dateRangeForMode(state.granularity);
+}
+
+function dateRangeForMode(mode) {
+  const latest = latestAvailableDate;
+  if (mode === "today") return { start: latest, end: latest };
+  if (mode === "yesterday") {
+    const day = shiftDate(latest, -1);
+    return { start: day, end: day };
+  }
+  if (mode === "current-month") {
     return { start: `${latest.slice(0, 7)}-01`, end: latest };
   }
-  if (state.granularity === "last-month") {
+  if (mode === "last-month") {
     const [year, month] = latest.slice(0, 7).split("-").map(Number);
     const previousMonth = new Date(year, month - 2, 1);
     const start = formatDate(previousMonth);
     const end = formatDate(new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0));
     return { start, end };
   }
-  if (state.granularity === "last-7") return { start: shiftDate(latest, -6), end: latest };
-  if (state.granularity === "last-15") return { start: shiftDate(latest, -14), end: latest };
+  if (mode === "last-7") return { start: shiftDate(latest, -6), end: latest };
+  if (mode === "last-15") return { start: shiftDate(latest, -14), end: latest };
   return { start: state.date, end: state.date };
 }
 
@@ -1969,6 +2043,10 @@ function formatDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDate(date) {
+  return String(date || "").replaceAll("-", "/");
 }
 
 function barRow(label, value, width, color) {
