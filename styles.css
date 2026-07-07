@@ -1860,6 +1860,15 @@ table {
   background: transparent;
 }
 
+.live-data-table {
+  min-width: 2200px;
+}
+
+.empty-cell {
+  color: var(--muted);
+  text-align: center;
+}
+
 th,
 td {
   border-bottom: 1px solid var(--line);

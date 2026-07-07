@@ -38,8 +38,8 @@
 
         <section class="sync-panel" aria-label="数据同步状态">
           <span>数据状态</span>
-          <strong>路径确认中</strong>
-          <p>巨量引擎、抖店罗盘、小红书、视频号等待正式授权和下载口径确认。</p>
+          <strong>飞书 API 已接入</strong>
+          <p>双击桌面“数据看板更新”即可拉取直播间数据并同步上线。</p>
         </section>
       </aside>
 
@@ -218,9 +218,9 @@
                   <h3 id="trendTitle">按天投放与直播趋势</h3>
                 </div>
                 <div class="metric-tabs" role="tablist" aria-label="趋势指标">
-                  <button class="metric-tab active" data-metric="gmv" type="button">GMV</button>
+                  <button class="metric-tab active" data-metric="viewers" type="button">观看人数</button>
                   <button class="metric-tab" data-metric="cost" type="button">消耗</button>
-                  <button class="metric-tab" data-metric="roi" type="button">ROI</button>
+                  <button class="metric-tab" data-metric="payers" type="button">支付人数</button>
                 </div>
               </div>
               <div class="chart-wrap">
@@ -257,17 +257,28 @@
                 <button class="text-button" id="exportButton" type="button">导出 CSV</button>
               </div>
               <div class="table-wrap">
-                <table>
+                <table class="live-data-table">
                   <thead>
                     <tr>
-                      <th>直播间</th>
-                      <th>曝光</th>
-                      <th>点击率</th>
-                      <th>进入率</th>
-                      <th>成交 GMV</th>
-                      <th>ROI</th>
-                      <th>客单价</th>
-                      <th>建议</th>
+                      <th>日期</th>
+                      <th>平台</th>
+                      <th>直播间名称</th>
+                      <th>项目名称</th>
+                      <th>直播时长</th>
+                      <th>直播间曝光人数</th>
+                      <th>观看人数</th>
+                      <th>商品卡曝光人数</th>
+                      <th>商品卡点击人数</th>
+                      <th>支付人数</th>
+                      <th>评论人数</th>
+                      <th>整体消耗</th>
+                      <th>整体支付订单数</th>
+                      <th>单小时成交人数</th>
+                      <th>单小时场观</th>
+                      <th>曝光进入率</th>
+                      <th>商卡点击率</th>
+                      <th>点击成交率</th>
+                      <th>观看成交率</th>
                     </tr>
                   </thead>
                   <tbody id="roomTable"></tbody>
@@ -413,6 +424,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="./live-account-relations.js"></script>
+    <script src="./live-room-data.js"></script>
     <script src="./platform-spend-data.js"></script>
     <script src="./app.js"></script>
   </body>

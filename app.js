@@ -104,10 +104,13 @@ const dailyData = [
 
 const platformSpendRows = window.platformSpendRows || [];
 const liveAccountRelations = window.liveAccountRelations || [];
+const liveRoomRows = window.liveRoomRows || [];
 const spendDates = platformSpendRows.map((row) => row.date).sort();
+const liveDates = liveRoomRows.map((row) => row.date).filter(Boolean).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
-const latestAvailableDate = latestSpendDate || dailyData[dailyData.length - 1].date;
-const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates].sort()[0] || latestAvailableDate;
+const latestLiveDate = liveDates[liveDates.length - 1];
+const latestAvailableDate = [latestSpendDate, latestLiveDate, dailyData[dailyData.length - 1].date].filter(Boolean).sort().at(-1);
+const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates, ...liveDates].sort()[0] || latestAvailableDate;
 const defaultAccountFields = [
   "platform",
   "name",
@@ -554,12 +557,14 @@ function renderDateOptions() {
   }
 
   label.textContent = "日期";
-  dailyData.forEach((day) => {
-    const option = document.createElement("option");
-    option.value = day.date;
-    option.textContent = day.date;
-    dateSelect.append(option);
-  });
+  [...new Set([...dailyData.map((day) => day.date), ...spendDates, ...liveDates])]
+    .sort()
+    .forEach((date) => {
+      const option = document.createElement("option");
+      option.value = date;
+      option.textContent = date;
+      dateSelect.append(option);
+    });
   dateSelect.value = state.date;
 }
 
@@ -624,7 +629,7 @@ function renderRoomOptions() {
 
 function liveRoomOptions() {
   const platform = currentRoomPlatformFilter();
-  const roomMap = liveAccountRelations.reduce((output, item) => {
+  const roomMap = [...liveAccountRelations, ...liveRoomRows].reduce((output, item) => {
     const liveRoomName = normalizeValue(item.liveRoomName);
     const itemPlatform = normalizeValue(item.platform);
     if (!liveRoomName || !itemPlatform || isProjectLikeRoomName(liveRoomName, item)) return output;
@@ -807,7 +812,7 @@ function selectAccountPlatform(platform, source = "all") {
 }
 
 function selectedDay() {
-  return dailyData.find((day) => day.date === state.date);
+  return dailyData.find((day) => day.date === state.date) || dailyData[dailyData.length - 1];
 }
 
 function selectedDays() {
@@ -861,6 +866,53 @@ function selectedRoomMatchesRow(row) {
   const room = selectedRoomInfo();
   if (!room) return true;
   return row.platform === room.platform && relatedLiveRoomName(row) === room.name;
+}
+
+function liveRowsForPeriod() {
+  if (!liveRoomRows.length) return [];
+  const range = selectedDateRange();
+  const platform = currentRoomPlatformFilter();
+  return liveRoomRows.filter((row) => {
+    if (!isDateInRange(row.date, range)) return false;
+    if (platform !== "all" && row.platform !== platform) return false;
+    const room = selectedRoomInfo();
+    if (room && (row.platform !== room.platform || row.liveRoomName !== room.name)) return false;
+    return true;
+  });
+}
+
+function liveTotals() {
+  return liveRowsForPeriod().reduce(
+    (sum, row) => {
+      [
+        "roomImpressions",
+        "viewers",
+        "productCardImpressions",
+        "productCardClicks",
+        "payers",
+        "commenters",
+        "cost",
+        "orders",
+        "hourlyPayers",
+        "hourlyViewers",
+      ].forEach((key) => {
+        sum[key] += Number(row[key] || 0);
+      });
+      return sum;
+    },
+    {
+      roomImpressions: 0,
+      viewers: 0,
+      productCardImpressions: 0,
+      productCardClicks: 0,
+      payers: 0,
+      commenters: 0,
+      cost: 0,
+      orders: 0,
+      hourlyPayers: 0,
+      hourlyViewers: 0,
+    },
+  );
 }
 
 function totals(day) {
@@ -989,6 +1041,30 @@ function selectedRoomLabel() {
 function renderSummary() {
   if (state.view === "account") {
     renderSpendSummary();
+    return;
+  }
+
+  if (state.view === "live" && liveRoomRows.length) {
+    const data = liveTotals();
+    const cards = [
+      ["整体消耗", money(data.cost), selectedPeriodLabel()],
+      ["观看人数", compact(data.viewers), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
+      ["支付人数", compact(data.payers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
+      ["支付订单", compact(data.orders), `点击成交率 ${percentOrDash(rate(data.payers, data.productCardClicks))}`],
+      ["商品卡点击", compact(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
+    ];
+
+    document.querySelector("#summaryCards").innerHTML = cards
+      .map(
+        ([label, value, delta]) => `
+          <article class="summary-card">
+            <span class="label">${escapeHtml(label)}</span>
+            <strong class="value">${escapeHtml(value)}</strong>
+            <span class="delta">${escapeHtml(delta)}</span>
+          </article>
+        `,
+      )
+      .join("");
     return;
   }
 
@@ -1151,6 +1227,28 @@ function renderAccessGrid() {
 }
 
 function renderLiveKpis() {
+  if (liveRoomRows.length) {
+    const data = liveTotals();
+    const kpis = [
+      ["直播间曝光", compact(data.roomImpressions), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
+      ["观看人数", compact(data.viewers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
+      ["商品卡点击", compact(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
+      ["整体消耗", money(data.cost), `支付订单 ${compact(data.orders)}`],
+    ];
+    document.querySelector("#liveKpiList").innerHTML = kpis
+      .map(
+        ([label, value, note]) => `
+          <article class="live-kpi">
+            <span>${label}</span>
+            <strong>${value}</strong>
+            <small>${note}</small>
+          </article>
+        `,
+      )
+      .join("");
+    return;
+  }
+
   const data = totals();
   const kpis = [
     ["曝光", compact(data.impressions), "广告触达规模"],
@@ -1173,6 +1271,32 @@ function renderLiveKpis() {
 }
 
 function renderFunnel() {
+  if (liveRoomRows.length) {
+    const data = liveTotals();
+    const steps = [
+      ["直播间曝光", data.roomImpressions],
+      ["观看人数", data.viewers],
+      ["商卡曝光", data.productCardImpressions],
+      ["商卡点击", data.productCardClicks],
+      ["支付人数", data.payers],
+      ["支付订单", data.orders],
+    ];
+    const max = Math.max(steps[0][1], 1);
+    document.querySelector("#funnel").innerHTML = steps
+      .map(([label, value], index) => {
+        const width = Math.max((value / max) * 100, value ? 3 : 0);
+        return `
+          <div class="funnel-step">
+            <span>${label}</span>
+            <div class="bar"><span style="--w: ${width}%; --c: ${colors[index % colors.length]}"></span></div>
+            <span>${compact(value)}</span>
+          </div>
+        `;
+      })
+      .join("");
+    return;
+  }
+
   const data = totals();
   const steps = [
     ["曝光", data.impressions],
@@ -1220,6 +1344,37 @@ function renderSegments() {
 }
 
 function renderTable() {
+  if (liveRoomRows.length) {
+    const rows = liveRowsForPeriod().map(
+      (row) => `
+        <tr>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${escapeHtml(row.platform)}</td>
+          <td>${escapeHtml(row.liveRoomName)}</td>
+          <td>${escapeHtml(row.projectName)}</td>
+          <td>${escapeHtml(row.duration || "-")}</td>
+          <td>${numberOrDash(row.roomImpressions)}</td>
+          <td>${numberOrDash(row.viewers)}</td>
+          <td>${numberOrDash(row.productCardImpressions)}</td>
+          <td>${numberOrDash(row.productCardClicks)}</td>
+          <td>${numberOrDash(row.payers)}</td>
+          <td>${numberOrDash(row.commenters)}</td>
+          <td>${money(row.cost)}</td>
+          <td>${numberOrDash(row.orders)}</td>
+          <td>${numberOrDash(row.hourlyPayers)}</td>
+          <td>${numberOrDash(row.hourlyViewers)}</td>
+          <td>${liveRate(row.exposureEnterRate)}</td>
+          <td>${liveRate(row.productCardClickRate)}</td>
+          <td>${liveRate(row.clickPayRate)}</td>
+          <td>${liveRate(row.viewPayRate)}</td>
+        </tr>
+      `,
+    );
+    document.querySelector("#roomTable").innerHTML =
+      rows.join("") || `<tr><td colspan="19" class="empty-cell">当前筛选条件下暂无直播间数据</td></tr>`;
+    return;
+  }
+
   const rows = selectedRoomSummaries().map((room) => {
     const ctr = (room.clicks / room.impressions) * 100;
     const enterRate = (room.enters / room.clicks) * 100;
@@ -1525,6 +1680,12 @@ function percentOrDash(value) {
   return value === null || value === undefined || Number.isNaN(value) ? "-" : `${Number(value).toFixed(2)}%`;
 }
 
+function liveRate(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return "-";
+  return percentOrDash(number * 100);
+}
+
 function moneyOrDash(value) {
   return value === null || value === undefined || Number.isNaN(value) ? "-" : money(value);
 }
@@ -1603,6 +1764,54 @@ function applyFieldPreset(preset) {
 }
 
 function exportCsv() {
+  if (liveRoomRows.length) {
+    const headers = [
+      "日期",
+      "平台",
+      "直播间名称",
+      "项目名称",
+      "直播时长",
+      "直播间曝光人数",
+      "观看人数",
+      "商品卡曝光人数",
+      "商品卡点击人数",
+      "支付人数",
+      "评论人数",
+      "整体消耗",
+      "整体支付订单数",
+      "单小时成交人数",
+      "单小时场观",
+      "曝光进入率",
+      "商卡点击率",
+      "点击成交率",
+      "观看成交率",
+    ];
+    const rows = liveRowsForPeriod().map((row) => [
+      row.date,
+      row.platform,
+      row.liveRoomName,
+      row.projectName,
+      row.duration,
+      row.roomImpressions,
+      row.viewers,
+      row.productCardImpressions,
+      row.productCardClicks,
+      row.payers,
+      row.commenters,
+      row.cost,
+      row.orders,
+      row.hourlyPayers,
+      row.hourlyViewers,
+      liveRate(row.exposureEnterRate),
+      liveRate(row.productCardClickRate),
+      liveRate(row.clickPayRate),
+      liveRate(row.viewPayRate),
+    ]);
+    downloadCsv(`直播间基础数据-${selectedPeriodLabel()}.csv`, [headers, ...rows]);
+    showToast("已导出直播间基础数据");
+    return;
+  }
+
   const rows = selectedRoomSummaries().map((room) => [
     selectedPeriodLabel(),
     room.name,
@@ -1616,13 +1825,7 @@ function exportCsv() {
   const csv = [["周期", "直播间", "曝光", "点击率", "进入率", "成交GMV", "ROI", "客单价"], ...rows]
     .map((row) => row.join(","))
     .join("\n");
-  const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `广告投放看板-${selectedPeriodLabel()}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadCsv(`广告投放看板-${selectedPeriodLabel()}.csv`, csv);
 }
 
 function exportAccountCsv() {
@@ -1637,14 +1840,21 @@ function exportAccountCsv() {
   const csv = [["周期", "维度", ...columns.map((column) => column.label)], ...rows]
     .map((row) => row.join(","))
     .join("\n");
+  downloadCsv(`全平台账户消耗明细-${accountPlatformLabel()}-${selectedPeriodLabel()}.csv`, csv);
+  showToast("已导出当前筛选视图");
+}
+
+function downloadCsv(filename, csvRows) {
+  const csv = Array.isArray(csvRows)
+    ? csvRows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n")
+    : csvRows;
   const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `全平台账户消耗明细-${accountPlatformLabel()}-${selectedPeriodLabel()}.csv`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
-  showToast("已导出当前筛选视图");
 }
 
 function spendRowsForPeriod() {
@@ -1990,8 +2200,36 @@ function selectedRoomSummaries() {
 }
 
 function trendBuckets() {
+  if (state.view === "live" && liveRoomRows.length) return liveTrendBuckets();
   const range = state.granularity === "day" ? { start: dailyData[0].date, end: latestAvailableDate } : selectedDateRange();
   return dailyData.filter((day) => isDateInRange(day.date, range)).map((day) => ({ label: day.date.slice(5), data: totals(day) }));
+}
+
+function liveTrendBuckets() {
+  const range = state.granularity === "day" ? { start: liveDates[0] || state.date, end: latestLiveDate || state.date } : selectedDateRange();
+  const platform = currentRoomPlatformFilter();
+  const room = selectedRoomInfo();
+  const groups = liveRoomRows
+    .filter((row) => isDateInRange(row.date, range))
+    .filter((row) => platform === "all" || row.platform === platform)
+    .filter((row) => !room || (row.platform === room.platform && row.liveRoomName === room.name))
+    .reduce((output, row) => {
+      output[row.date] = output[row.date] || {
+        label: row.date.slice(5),
+        data: { cost: 0, viewers: 0, payers: 0, roomImpressions: 0, productCardClicks: 0, orders: 0 },
+      };
+      output[row.date].data.cost += Number(row.cost || 0);
+      output[row.date].data.viewers += Number(row.viewers || 0);
+      output[row.date].data.payers += Number(row.payers || 0);
+      output[row.date].data.roomImpressions += Number(row.roomImpressions || 0);
+      output[row.date].data.productCardClicks += Number(row.productCardClicks || 0);
+      output[row.date].data.orders += Number(row.orders || 0);
+      return output;
+    }, {});
+
+  return Object.entries(groups)
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+    .map(([, bucket]) => bucket);
 }
 
 function selectedPeriodLabel() {
