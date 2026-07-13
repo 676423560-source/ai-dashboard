@@ -105,12 +105,18 @@ const dailyData = [
 const platformSpendRows = window.platformSpendRows || [];
 const liveAccountRelations = window.liveAccountRelations || [];
 const liveRoomRows = window.liveRoomRows || [];
+const audienceProfileRows = window.audienceProfileRows || [];
 const spendDates = platformSpendRows.map((row) => row.date).sort();
 const liveDates = liveRoomRows.map((row) => row.date).filter(Boolean).sort();
+const audienceDates = audienceProfileRows.map((row) => row.date).filter(Boolean).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
 const latestLiveDate = liveDates[liveDates.length - 1];
-const latestAvailableDate = [latestSpendDate, latestLiveDate, dailyData[dailyData.length - 1].date].filter(Boolean).sort().at(-1);
-const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates, ...liveDates].sort()[0] || latestAvailableDate;
+const latestAudienceDate = audienceDates[audienceDates.length - 1];
+const latestAvailableDate = [latestSpendDate, latestLiveDate, latestAudienceDate, dailyData[dailyData.length - 1].date]
+  .filter(Boolean)
+  .sort()
+  .at(-1);
+const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates, ...liveDates, ...audienceDates].sort()[0] || latestAvailableDate;
 const defaultAccountFields = [
   "platform",
   "name",
@@ -126,6 +132,7 @@ const state = {
   pendingStart: earliestAvailableDate,
   pendingEnd: latestAvailableDate,
   room: "all",
+  roomMenuPlatform: "",
   platform: "all",
   accountDimension: "project",
   accountPlatform: "all",
@@ -136,8 +143,13 @@ const state = {
   accountPositiveOnly: false,
   accountVisibleFields: [...defaultAccountFields],
   selectedAccountKey: "",
+  audienceAccount: "all",
+  audienceAccountPlatform: "小红书",
+  audienceAccountRoom: "",
   metric: "cost",
-  view: "audience",
+  calendarMonth: latestAvailableDate.slice(0, 7),
+  calendarSelectingEnd: false,
+  view: "room",
 };
 
 const colors = ["#1e40af", "#0f766e", "#c2410c", "#a16207"];
@@ -350,8 +362,6 @@ function makeRoom(name, cost, impressions, clicks, enters, viewers, interactions
 
 function init() {
   const dateSelect = document.querySelector("#dateSelect");
-  const startDateInput = document.querySelector("#startDateInput");
-  const endDateInput = document.querySelector("#endDateInput");
   const dateRangeTrigger = document.querySelector("#dateRangeTrigger");
   renderDateOptions();
   renderRoomOptions();
@@ -370,44 +380,62 @@ function init() {
     render();
   });
 
-  startDateInput.addEventListener("change", (event) => {
-    state.pendingStart = event.target.value || earliestAvailableDate;
-    if (state.pendingStart > state.pendingEnd) {
-      state.pendingEnd = state.pendingStart;
-      endDateInput.value = state.pendingEnd;
-    }
-  });
-
-  endDateInput.addEventListener("change", (event) => {
-    state.pendingEnd = event.target.value || latestAvailableDate;
-    if (state.pendingEnd < state.pendingStart) {
-      state.pendingStart = state.pendingEnd;
-      startDateInput.value = state.pendingStart;
-    }
-  });
-
   dateRangeTrigger.addEventListener("click", () => toggleDateRangePopover());
   document.querySelector("#applyDateRange").addEventListener("click", applyCustomDateRange);
   document.querySelector("#cancelDateRange").addEventListener("click", closeDateRangePopover);
+  document.querySelector("#previousCalendarYear").addEventListener("click", () => shiftCalendarView(-12));
+  document.querySelector("#previousCalendarMonth").addEventListener("click", () => shiftCalendarView(-1));
+  document.querySelector("#nextCalendarMonth").addEventListener("click", () => shiftCalendarView(1));
+  document.querySelector("#nextCalendarYear").addEventListener("click", () => shiftCalendarView(12));
+  document.querySelector("#dateCalendars").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-calendar-date]");
+    if (!button || button.disabled) return;
+    event.stopPropagation();
+    selectCalendarDate(button.dataset.calendarDate);
+  });
   document.querySelectorAll("[data-range-shortcut]").forEach((button) => {
     button.addEventListener("click", () => applyDateShortcut(button.dataset.rangeShortcut));
   });
-  [startDateInput, endDateInput].forEach((input) => {
-    input.addEventListener("click", () => openNativeDatePicker(input));
-    input.addEventListener("focus", () => openNativeDatePicker(input));
+
+  document.querySelector("#roomTrigger").addEventListener("click", toggleRoomMenu);
+  document.querySelector("#roomMenu").addEventListener("click", (event) => {
+    const roomButton = event.target.closest("[data-room-value]");
+    if (roomButton) {
+      selectRoom(decodeURIComponent(roomButton.dataset.roomValue));
+      return;
+    }
+    const platformButton = event.target.closest("[data-room-platform]");
+    if (!platformButton) return;
+    const platformItem = platformButton.closest(".room-platform-item");
+    state.roomMenuPlatform = platformButton.dataset.roomPlatform;
+    document.querySelectorAll(".room-platform-item").forEach((item) => {
+      item.classList.toggle("selected", item === platformItem);
+    });
+    document.querySelectorAll(".room-platform-item.open").forEach((item) => {
+      if (item !== platformItem) item.classList.remove("open");
+    });
+    platformItem.classList.toggle("open");
+    platformButton.setAttribute("aria-expanded", String(platformItem.classList.contains("open")));
   });
 
-  document.querySelector("#roomSelect").addEventListener("change", (event) => {
-    state.room = event.target.value;
-    state.selectedAccountKey = "";
-    renderAccountDimensionPicker();
-    render();
-  });
-
-  document.querySelector("#platformSelect").addEventListener("change", (event) => {
-    state.platform = event.target.value;
-    renderRoomOptions();
-    render();
+  document.querySelector("#audienceAccountTrigger").addEventListener("click", toggleAudienceAccountMenu);
+  document.querySelector("#audienceAccountMenu").addEventListener("click", (event) => {
+    const accountButton = event.target.closest("[data-audience-account]");
+    if (accountButton) {
+      selectAudienceAccount(decodeURIComponent(accountButton.dataset.audienceAccount));
+      return;
+    }
+    const roomButton = event.target.closest("[data-audience-account-room]");
+    if (roomButton) {
+      state.audienceAccountRoom = decodeURIComponent(roomButton.dataset.audienceAccountRoom);
+      renderAudienceAccountPicker();
+      return;
+    }
+    const platformButton = event.target.closest("[data-audience-account-platform]");
+    if (!platformButton) return;
+    state.audienceAccountPlatform = decodeURIComponent(platformButton.dataset.audienceAccountPlatform);
+    state.audienceAccountRoom = "";
+    renderAudienceAccountPicker();
   });
 
   document.querySelector("#accountDimensionTrigger").addEventListener("click", () => {
@@ -434,6 +462,8 @@ function init() {
     if (!event.target.closest("#accountDimensionPicker")) closeDimensionMenu();
     if (!event.target.closest("#accountPlatformPicker")) closePlatformMenu();
     if (!event.target.closest("#customDateRange")) closeDateRangePopover();
+    if (!event.target.closest("#roomPicker")) closeRoomMenu();
+    if (!event.target.closest("#audienceAccountPicker")) closeAudienceAccountMenu();
   });
 
   document.querySelector("#accountPlatformTrigger").addEventListener("click", () => {
@@ -512,6 +542,9 @@ function init() {
     if (event.key === "Escape") {
       closeAccountDetailModal();
       closeFieldConfigModal();
+      closeDateRangePopover();
+      closeRoomMenu();
+      closeAudienceAccountMenu();
     }
   });
   render();
@@ -520,52 +553,21 @@ function init() {
 function renderDateOptions() {
   const dateSelect = document.querySelector("#dateSelect");
   const customDateRange = document.querySelector("#customDateRange");
-  const startDateInput = document.querySelector("#startDateInput");
-  const endDateInput = document.querySelector("#endDateInput");
   const dateRangeText = document.querySelector("#dateRangeText");
   const label = document.querySelector("#dateFieldLabel");
-  dateSelect.innerHTML = "";
-  dateSelect.classList.remove("hidden");
-  dateSelect.disabled = false;
-  customDateRange.classList.remove("visible");
-
-  if (state.granularity === "custom") {
-    label.textContent = "自定义时间";
-    dateSelect.classList.add("hidden");
-    customDateRange.classList.add("visible");
-    startDateInput.min = earliestAvailableDate;
-    startDateInput.max = latestAvailableDate;
-    endDateInput.min = earliestAvailableDate;
-    endDateInput.max = latestAvailableDate;
-    startDateInput.value = state.customStart;
-    endDateInput.value = state.customEnd;
-    state.pendingStart = state.customStart;
-    state.pendingEnd = state.customEnd;
-    dateRangeText.textContent = `${formatDisplayDate(state.customStart)} ~ ${formatDisplayDate(state.customEnd)}`;
-    return;
-  }
-
-  if (state.granularity !== "day") {
-    label.textContent = "日期范围";
-    const option = document.createElement("option");
-    option.value = state.granularity;
-    option.textContent = selectedPeriodLabel();
-    dateSelect.append(option);
-    dateSelect.value = state.granularity;
-    dateSelect.disabled = true;
-    return;
-  }
-
-  label.textContent = "日期";
-  [...new Set([...dailyData.map((day) => day.date), ...spendDates, ...liveDates])]
-    .sort()
-    .forEach((date) => {
-      const option = document.createElement("option");
-      option.value = date;
-      option.textContent = date;
-      dateSelect.append(option);
-    });
-  dateSelect.value = state.date;
+  const range = selectedDateRange();
+  label.textContent = "日期范围";
+  dateSelect.innerHTML = `<option value="${escapeHtml(range.start)}">${escapeHtml(range.start)}</option>`;
+  dateSelect.classList.add("hidden");
+  dateSelect.disabled = true;
+  customDateRange.classList.add("visible");
+  document.querySelector("#startDateInput").value = range.start;
+  document.querySelector("#endDateInput").value = range.end;
+  dateRangeText.textContent = `${formatDisplayDate(range.start)} ~ ${formatDisplayDate(range.end)}`;
+  document.querySelector("#periodSelect").value = state.granularity;
+  document.querySelectorAll("[data-range-shortcut]").forEach((button) => {
+    button.classList.toggle("active", shortcutMatchesRange(button.dataset.rangeShortcut, range));
+  });
 }
 
 function toggleDateRangePopover() {
@@ -574,10 +576,15 @@ function toggleDateRangePopover() {
   const isOpen = customDateRange.classList.toggle("open");
   trigger.setAttribute("aria-expanded", String(isOpen));
   if (isOpen) {
-    state.pendingStart = state.customStart;
-    state.pendingEnd = state.customEnd;
+    const range = selectedDateRange();
+    state.pendingStart = range.start;
+    state.pendingEnd = range.end;
+    state.calendarMonth = range.start.slice(0, 7);
+    state.calendarSelectingEnd = false;
     document.querySelector("#startDateInput").value = state.pendingStart;
     document.querySelector("#endDateInput").value = state.pendingEnd;
+    closeRoomMenu();
+    renderDateCalendars();
   }
 }
 
@@ -589,8 +596,18 @@ function closeDateRangePopover() {
 }
 
 function applyCustomDateRange() {
-  state.customStart = state.pendingStart <= state.pendingEnd ? state.pendingStart : state.pendingEnd;
-  state.customEnd = state.pendingStart <= state.pendingEnd ? state.pendingEnd : state.pendingStart;
+  const start = state.pendingStart <= state.pendingEnd ? state.pendingStart : state.pendingEnd;
+  const requestedEnd = state.pendingStart <= state.pendingEnd ? state.pendingEnd : state.pendingStart;
+  const end = requestedEnd > maxCalendarRangeEnd(start) ? maxCalendarRangeEnd(start) : requestedEnd;
+  state.customStart = start;
+  state.customEnd = end;
+  if (start === end) {
+    state.granularity = "day";
+    state.date = start;
+    state.month = start.slice(0, 7);
+  } else {
+    state.granularity = "custom";
+  }
   closeDateRangePopover();
   renderDateOptions();
   renderAccountDimensionPicker();
@@ -601,30 +618,274 @@ function applyDateShortcut(shortcut) {
   const range = dateRangeForMode(shortcut);
   state.pendingStart = range.start;
   state.pendingEnd = range.end;
-  document.querySelector("#startDateInput").value = range.start;
-  document.querySelector("#endDateInput").value = range.end;
-  applyCustomDateRange();
+  state.granularity = shortcut === "today" || shortcut === "yesterday" ? "day" : shortcut;
+  state.customStart = range.start;
+  state.customEnd = range.end;
+  if (state.granularity === "day") {
+    state.date = range.start;
+    state.month = range.start.slice(0, 7);
+  }
+  closeDateRangePopover();
+  renderDateOptions();
+  renderAccountDimensionPicker();
+  render();
 }
 
-function openNativeDatePicker(input) {
-  try {
-    input.showPicker?.();
-  } catch {
-    input.focus();
+function shortcutMatchesRange(shortcut, range) {
+  const shortcutRange = dateRangeForMode(shortcut);
+  return shortcutRange.start === range.start && shortcutRange.end === range.end;
+}
+
+function shiftCalendarView(offset) {
+  state.calendarMonth = shiftMonth(state.calendarMonth, offset);
+  renderDateCalendars();
+}
+
+function shiftMonth(month, offset) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(year, monthNumber - 1 + offset, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function selectCalendarDate(date) {
+  if (!state.calendarSelectingEnd || date < state.pendingStart) {
+    state.pendingStart = date;
+    state.pendingEnd = date;
+    state.calendarSelectingEnd = true;
+  } else {
+    const maximumEnd = maxCalendarRangeEnd(state.pendingStart);
+    state.pendingEnd = date > maximumEnd ? maximumEnd : date;
+    state.calendarSelectingEnd = false;
   }
+  document.querySelector("#customDateRange").classList.add("open");
+  document.querySelector("#dateRangeTrigger").setAttribute("aria-expanded", "true");
+  document.querySelector("#startDateInput").value = state.pendingStart;
+  document.querySelector("#endDateInput").value = state.pendingEnd;
+  renderDateCalendars();
+}
+
+function renderDateCalendars() {
+  const months = [state.calendarMonth, shiftMonth(state.calendarMonth, 1)];
+  document.querySelector("#calendarRangeHint").textContent = state.calendarSelectingEnd
+    ? `${formatDisplayDate(state.pendingStart)} 起，请选择结束日期（最多3个月）`
+    : `${formatDisplayDate(state.pendingStart)} ~ ${formatDisplayDate(state.pendingEnd)}`;
+  document.querySelector("#applyDateRange").disabled = state.calendarSelectingEnd;
+  document.querySelector("#dateCalendars").innerHTML = months.map(calendarMonthMarkup).join("");
+}
+
+function maxCalendarRangeEnd(start) {
+  const [year, month, day] = start.split("-").map(Number);
+  const end = new Date(year, month - 1 + 3, day);
+  end.setDate(end.getDate() - 1);
+  return formatDate(end);
+}
+
+function calendarMonthMarkup(month) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthNumber - 1, 1);
+  const gridStart = new Date(year, monthNumber - 1, 1 - firstDay.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    const value = formatDate(date);
+    const outside = date.getMonth() !== monthNumber - 1;
+    const exceedsMaximumRange = state.calendarSelectingEnd && value > maxCalendarRangeEnd(state.pendingStart);
+    const disabled = outside || value > latestAvailableDate || exceedsMaximumRange;
+    const classes = [
+      outside ? "outside" : "",
+      !outside && value === state.pendingStart ? "range-start" : "",
+      !outside && value === state.pendingEnd ? "range-end" : "",
+      !outside && value > state.pendingStart && value < state.pendingEnd ? "in-range" : "",
+    ].filter(Boolean).join(" ");
+    return `<button class="calendar-day ${classes}" data-calendar-date="${value}" type="button" ${disabled ? "disabled" : ""} aria-label="${value}">${date.getDate()}</button>`;
+  }).join("");
+  return `
+    <section class="calendar-month" aria-label="${year}年${monthNumber}月">
+      <h4>${year}年 ${monthNumber}月</h4>
+      <div class="calendar-weekdays" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div class="calendar-days">${days}</div>
+    </section>
+  `;
 }
 
 function renderRoomOptions() {
-  const roomSelect = document.querySelector("#roomSelect");
   const rooms = liveRoomOptions();
-  roomSelect.innerHTML = [
-    `<option value="all">全部直播间</option>`,
-    ...rooms.map((room) => `<option value="${escapeHtml(room.value)}">${escapeHtml(room.label)}</option>`),
-  ].join("");
   if (state.room !== "all" && !rooms.some((room) => room.value === state.room)) {
     state.room = "all";
   }
-  roomSelect.value = state.room;
+  const selected = rooms.find((room) => room.value === state.room);
+  if (selected) state.roomMenuPlatform = selected.platform;
+  document.querySelector("#roomText").textContent = selected ? selected.label : "全部直播间";
+  const groups = rooms.reduce((output, room) => {
+    output[room.platform] = output[room.platform] || [];
+    output[room.platform].push(room);
+    return output;
+  }, {});
+  document.querySelector("#roomMenu").innerHTML = `
+    <button class="room-menu-all ${state.room === "all" ? "active" : ""}" data-room-value="${encodeURIComponent("all")}" type="button" role="menuitem">
+      <span>全部直播间</span><small>${rooms.length} 个</small>
+    </button>
+    ${Object.entries(groups)
+      .sort(([platformA], [platformB]) => {
+        const order = ["小红书", "视频号", "巨量引擎"];
+        const indexA = order.indexOf(platformA);
+        const indexB = order.indexOf(platformB);
+        return (indexA < 0 ? 99 : indexA) - (indexB < 0 ? 99 : indexB) || platformA.localeCompare(platformB, "zh-CN");
+      })
+      .map(([platform, platformRooms]) => `
+      <div class="room-platform-item ${state.roomMenuPlatform === platform ? "selected" : ""}">
+        <button class="room-platform-trigger" data-room-platform="${escapeHtml(platform)}" type="button" aria-expanded="false" ${state.roomMenuPlatform === platform ? 'aria-current="true"' : ""}>
+          <span>${escapeHtml(platform)}</span><small>${platformRooms.length} 个</small><b aria-hidden="true">›</b>
+        </button>
+        <div class="room-submenu" role="menu" aria-label="${escapeHtml(platform)}直播间">
+          ${platformRooms.map((room) => `
+            <button class="${state.room === room.value ? "active" : ""}" data-room-value="${encodeURIComponent(room.value)}" type="button" role="menuitem">
+              <span>${escapeHtml(room.name)}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `).join("")}
+  `;
+}
+
+function toggleRoomMenu() {
+  const picker = document.querySelector("#roomPicker");
+  const trigger = document.querySelector("#roomTrigger");
+  const isOpen = picker.classList.toggle("open");
+  trigger.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) closeDateRangePopover();
+}
+
+function closeRoomMenu() {
+  document.querySelector("#roomPicker")?.classList.remove("open");
+  document.querySelector("#roomTrigger")?.setAttribute("aria-expanded", "false");
+  document.querySelectorAll(".room-platform-item.open").forEach((item) => item.classList.remove("open"));
+}
+
+function selectRoom(value) {
+  const selectedAccount = selectedAudienceAccount();
+  if (selectedAccount && value !== roomOptionValue(selectedAccount.platform, selectedAccount.liveRoomName)) {
+    state.audienceAccount = "all";
+  }
+  state.room = value;
+  state.selectedAccountKey = "";
+  closeRoomMenu();
+  renderAccountDimensionPicker();
+  render();
+}
+
+function audienceAccountRelations() {
+  const output = new Map();
+  liveAccountRelations.forEach((item) => {
+    const platform = normalizeValue(item.platform);
+    const liveRoomName = normalizeValue(item.liveRoomName);
+    const accountId = normalizeValue(item.accountId);
+    const accountName = normalizeValue(item.accountName) || accountId;
+    if (!platform || !liveRoomName || !accountId) return;
+    const key = [platform, liveRoomName, accountId].join("::");
+    output.set(key, { ...item, platform, liveRoomName, accountId, accountName, key });
+  });
+  return [...output.values()].sort(
+    (a, b) =>
+      a.platform.localeCompare(b.platform, "zh-CN") ||
+      a.liveRoomName.localeCompare(b.liveRoomName, "zh-CN") ||
+      a.accountName.localeCompare(b.accountName, "zh-CN"),
+  );
+}
+
+function selectedAudienceAccount() {
+  if (state.audienceAccount === "all") return null;
+  return audienceAccountRelations().find((item) => item.key === state.audienceAccount) || null;
+}
+
+function renderAudienceAccountPicker() {
+  const relations = audienceAccountRelations();
+  const platformOrder = ["小红书", "视频号", "巨量引擎"];
+  const platforms = [...new Set(relations.map((item) => item.platform))].sort((a, b) => {
+    const indexA = platformOrder.indexOf(a);
+    const indexB = platformOrder.indexOf(b);
+    return (indexA < 0 ? 99 : indexA) - (indexB < 0 ? 99 : indexB) || a.localeCompare(b, "zh-CN");
+  });
+  if (!platforms.includes(state.audienceAccountPlatform)) state.audienceAccountPlatform = platforms[0] || "";
+
+  const rooms = [...new Set(
+    relations.filter((item) => item.platform === state.audienceAccountPlatform).map((item) => item.liveRoomName),
+  )].sort((a, b) => a.localeCompare(b, "zh-CN"));
+  if (!rooms.includes(state.audienceAccountRoom)) state.audienceAccountRoom = rooms[0] || "";
+  const accounts = relations.filter(
+    (item) => item.platform === state.audienceAccountPlatform && item.liveRoomName === state.audienceAccountRoom,
+  );
+  const selected = selectedAudienceAccount();
+
+  document.querySelector("#audienceAccountText").textContent = selected
+    ? `${selected.accountName}（${selected.platform}）`
+    : "全部投放账户";
+  document.querySelector(".audience-account-all").classList.toggle("active", !selected);
+  document.querySelector("#audienceAccountPlatforms").innerHTML = platforms
+    .map((platform) => `
+      <button class="${platform === state.audienceAccountPlatform ? "active" : ""}" data-audience-account-platform="${encodeURIComponent(platform)}" type="button">
+        <span>${escapeHtml(platform)}</span>
+        <small>${relations.filter((item) => item.platform === platform).length} 个账户</small>
+      </button>
+    `)
+    .join("");
+  document.querySelector("#audienceAccountRooms").innerHTML = rooms.length
+    ? rooms.map((room) => `
+        <button class="${room === state.audienceAccountRoom ? "active" : ""}" data-audience-account-room="${encodeURIComponent(room)}" type="button">
+          <span>${escapeHtml(room)}</span>
+          <small>${relations.filter((item) => item.platform === state.audienceAccountPlatform && item.liveRoomName === room).length} 个</small>
+        </button>
+      `).join("")
+    : `<div class="audience-account-level-empty">暂无直播间</div>`;
+  document.querySelector("#audienceAccountAccounts").innerHTML = accounts.length
+    ? accounts.map((account) => `
+        <button class="${state.audienceAccount === account.key ? "active" : ""}" data-audience-account="${encodeURIComponent(account.key)}" type="button">
+          <span>${escapeHtml(account.accountName)}</span>
+          <small>ID ${escapeHtml(account.accountId)} · ${escapeHtml(audienceAccountSourceLabel(account))}</small>
+        </button>
+      `).join("")
+    : `<div class="audience-account-level-empty">暂无投放账户</div>`;
+}
+
+function toggleAudienceAccountMenu() {
+  const picker = document.querySelector("#audienceAccountPicker");
+  const isOpen = picker.classList.toggle("open");
+  document.querySelector("#audienceAccountTrigger").setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) {
+    closeDateRangePopover();
+    closeRoomMenu();
+  }
+}
+
+function closeAudienceAccountMenu() {
+  document.querySelector("#audienceAccountPicker")?.classList.remove("open");
+  document.querySelector("#audienceAccountTrigger")?.setAttribute("aria-expanded", "false");
+}
+
+function selectAudienceAccount(key) {
+  state.audienceAccount = key;
+  const selected = selectedAudienceAccount();
+  if (selected) {
+    state.platform = "all";
+    state.audienceAccountPlatform = selected.platform;
+    state.audienceAccountRoom = selected.liveRoomName;
+    state.room = roomOptionValue(selected.platform, selected.liveRoomName);
+  }
+  closeAudienceAccountMenu();
+  render();
+}
+
+function audienceAccountSourceLabel(account) {
+  const spendRow = platformSpendRows.find(
+    (row) => normalizeValue(row.platform) === account.platform && normalizeValue(row.accountId) === account.accountId,
+  );
+  const rawPlatform = normalizeValue(spendRow?.rawPlatform);
+  if (rawPlatform === "xhs_juguang") return "聚光";
+  if (rawPlatform === "xhs_chengfeng") return "乘风";
+  if (account.platform === "视频号") return "腾讯广告";
+  if (account.platform === "巨量引擎") return "巨量引擎";
+  return normalizeValue(spendRow?.source) || "账户映射";
 }
 
 function liveRoomOptions() {
@@ -634,8 +895,10 @@ function liveRoomOptions() {
     const itemPlatform = normalizeValue(item.platform);
     if (!liveRoomName || !itemPlatform || isProjectLikeRoomName(liveRoomName, item)) return output;
     if (platform !== "all" && itemPlatform !== platform) return output;
+    const key = `${itemPlatform}::${canonicalRoomName(liveRoomName)}`;
+    if (output.has(key)) return output;
     const value = roomOptionValue(itemPlatform, liveRoomName);
-    output.set(value, {
+    output.set(key, {
       value,
       name: liveRoomName,
       platform: itemPlatform,
@@ -666,6 +929,10 @@ function isProjectLikeRoomName(name, item) {
 
 function roomOptionValue(platform, name) {
   return `${platform}::${name}`;
+}
+
+function canonicalRoomName(name) {
+  return normalizeValue(name).toLowerCase().replace(/[\s\-_·（）()]/g, "");
 }
 
 function selectedRoomInfo() {
@@ -848,7 +1115,7 @@ function dateRangeForMode(mode) {
     return { start, end };
   }
   if (mode === "last-7") return { start: shiftDate(latest, -6), end: latest };
-  if (mode === "last-15") return { start: shiftDate(latest, -14), end: latest };
+  if (mode === "last-14") return { start: shiftDate(latest, -13), end: latest };
   return { start: state.date, end: state.date };
 }
 
@@ -865,7 +1132,7 @@ function selectedRooms(day = selectedDay()) {
 function selectedRoomMatchesRow(row) {
   const room = selectedRoomInfo();
   if (!room) return true;
-  return row.platform === room.platform && relatedLiveRoomName(row) === room.name;
+  return row.platform === room.platform && canonicalRoomName(relatedLiveRoomName(row)) === canonicalRoomName(room.name);
 }
 
 function liveRowsForPeriod() {
@@ -876,7 +1143,7 @@ function liveRowsForPeriod() {
     if (!isDateInRange(row.date, range)) return false;
     if (platform !== "all" && row.platform !== platform) return false;
     const room = selectedRoomInfo();
-    if (room && (row.platform !== room.platform || row.liveRoomName !== room.name)) return false;
+    if (room && (row.platform !== room.platform || canonicalRoomName(row.liveRoomName) !== canonicalRoomName(room.name))) return false;
     return true;
   });
 }
@@ -988,17 +1255,16 @@ function weightedProfile(field) {
 function render() {
   renderView();
   renderRoomOptions();
+  renderAudienceAccountPicker();
   renderAccountDimensionPicker();
   renderAccountPlatformPicker();
   renderScope();
   renderSummary();
   renderTrend();
   renderAudience();
-  renderProfileBreakdown();
   renderAccessGrid();
   renderLiveKpis();
   renderFunnel();
-  renderSegments();
   renderTable();
   renderAccountDetails();
   applyMotion();
@@ -1013,13 +1279,21 @@ function renderView() {
   });
   document.querySelector("#accountDimensionField").classList.toggle("visible", state.view === "account");
   document.querySelector("#accountPlatformField").classList.toggle("visible", state.view === "account");
+  document.querySelector("#summaryCards").hidden = state.view === "room";
+  document.querySelector(".controls").classList.toggle("room-mode", state.view === "room");
 }
 
 function renderScope() {
   const roomName = selectedRoomLabel();
   const period = selectedPeriodLabel();
   document.querySelector("#scopeType").textContent = `当前口径：${periodModeLabel()}`;
-  document.querySelector("#audienceScope").textContent = `${roomName} · ${platformConfig[state.platform].label} · ${period}`;
+  const audienceRow = selectedAudienceRow();
+  const audienceAccount = selectedAudienceAccount();
+  document.querySelector("#audienceScope").textContent = audienceAccount
+    ? `${audienceAccount.liveRoomName}（${audienceAccount.platform}） · ${audienceAccount.accountName} · ID ${audienceAccount.accountId} · ${period}`
+    : audienceRow
+      ? `${audienceRow.projectName || "未匹配项目"} · ${audienceRow.roomName}（${audienceRow.platformLabel || platformConfig[audienceRow.platform]?.label || "平台"}） · ${audienceRow.date}${audienceRow.status === "sample" ? " · 样式预览" : ""}`
+      : `${roomName} · 全部投放账户 · ${period}`;
   document.querySelector("#liveScope").textContent = `${roomName} · ${period}`;
   const projectScope =
     state.view === "account" && state.accountDimension === "project" && state.accountProject !== "all"
@@ -1044,7 +1318,7 @@ function renderSummary() {
     return;
   }
 
-  if (state.view === "live" && liveRoomRows.length) {
+  if (state.view === "room" && liveRoomRows.length) {
     const data = liveTotals();
     const cards = [
       ["整体消耗", money(data.cost), selectedPeriodLabel()],
@@ -1179,44 +1453,243 @@ function renderTrend() {
 }
 
 function renderAudience() {
-  const profiles = selectedAudienceProfiles();
-  const totalViewers = profiles.reduce((sum, profile) => sum + profile.viewers, 0);
-  const female = Math.round(profiles.reduce((sum, profile) => sum + profile.female * profile.viewers, 0) / totalViewers);
-  document.querySelector("#genderDonut").style.background = `conic-gradient(var(--coral) 0 ${female}%, var(--blue) ${female}% 100%)`;
-  document.querySelector("#mainGender").textContent = `女性 ${female}%`;
+  const row = selectedAudienceRow();
+  const kpiContainer = document.querySelector("#audienceKpis");
+  const chartGrid = document.querySelector("#audienceChartGrid");
+  const summary = document.querySelector("#audienceSummaryList");
+  const trafficStrip = document.querySelector("#trafficShareStrip");
+  const trafficTable = document.querySelector("#trafficTableBody");
 
-  const profileItems = [
-    ["年龄峰值", topEntry(weightedProfile("age"))],
-    ["城市层级", topEntry(weightedProfile("cities"))],
-    ["兴趣偏好", topEntry(weightedProfile("interests"))],
+  if (!row) {
+    kpiContainer.innerHTML = `<div class="audience-empty">当前筛选条件下暂无人群画像数据</div>`;
+    chartGrid.innerHTML = `<div class="audience-empty">请选择已有数据的日期、平台或直播间</div>`;
+    summary.innerHTML = `<div class="audience-empty audience-summary-empty">当前筛选范围暂无画像摘要数据</div>`;
+    trafficStrip.innerHTML = "";
+    trafficTable.innerHTML = `<tr><td colspan="4"><div class="audience-empty">当前筛选范围暂无流量渠道数据</div></td></tr>`;
+    return;
+  }
+
+  const metrics = row.metrics || {};
+  const kpis = [
+    ["累计观看人数", formatInteger(metrics.viewers), "整场去重观看用户"],
+    ["曝光次数", formatInteger(metrics.impressions), "直播间累计曝光"],
+    ["人均观看时长", formatAudienceDuration(metrics.avgWatchSeconds), "观看深度"],
+    ["观看互动率", formatPercent(metrics.interactionRate), "评论、点赞等互动"],
+    ["成交人数", formatInteger(metrics.payers), "整场支付人数"],
+    ["退款金额占比", formatPercent(metrics.refundRate), "成交质量参考"],
   ];
-
-  document.querySelector("#profileList").innerHTML = profileItems
-    .map(([label, [name, value]], index) => barRow(label, `${name} ${value}%`, value, colors[index]))
-    .join("");
-}
-
-function renderProfileBreakdown() {
-  const groups = [
-    ["年龄分布", weightedProfile("age")],
-    ["城市层级", weightedProfile("cities")],
-    ["兴趣偏好", weightedProfile("interests")],
-  ];
-
-  document.querySelector("#profileBreakdown").innerHTML = groups
+  kpiContainer.innerHTML = kpis
     .map(
-      ([title, values], groupIndex) => `
-        <article class="breakdown-card">
-          <strong>${title}</strong>
-          <div class="profile-list">
-            ${Object.entries(values)
-              .map(([label, value], index) => barRow(label, `${value}%`, value, colors[(groupIndex + index) % colors.length]))
-              .join("")}
-          </div>
+      ([label, value, note], index) => `
+        <article class="audience-kpi-card" style="--index:${index}">
+          <span>${label}</span>
+          <strong>${value}</strong>
+          <small>${note}</small>
         </article>
       `,
     )
     .join("");
+
+  const dimensions = [
+    ["性别分布", "gender"],
+    ["年龄分布", "age"],
+    ["地域分布", "regions"],
+    ["手机价格分布", "phonePrices"],
+    ["策略人群分布", "segments"],
+  ];
+  chartGrid.innerHTML = dimensions
+    .map(([title, key]) => audienceChartCard(title, row.profiles?.watch?.[key], row.profiles?.pay?.[key], key))
+    .join("");
+
+  summary.innerHTML = [
+    profileSummaryCard("场观核心人群", row.profiles?.watch, "watch"),
+    profileSummaryCard("购买核心人群", row.profiles?.pay, "pay"),
+  ].join("");
+
+  const traffic = row.traffic || [];
+  trafficStrip.innerHTML = traffic
+    .map(
+      (item, index) => `
+        <span class="traffic-share-segment" style="--share:${item.trafficShare}; --segment:${index}" title="${escapeHtml(item.channel)} ${item.trafficShare}%">
+          ${item.trafficShare >= 9 ? escapeHtml(item.channel) : ""}
+        </span>
+      `,
+    )
+    .join("");
+  trafficTable.innerHTML = traffic
+    .map(
+      (item, index) => `
+        <tr>
+          <td><span class="channel-name"><i style="--segment:${index}"></i>${escapeHtml(item.channel)}</span></td>
+          <td>${trafficMetricCell(item.trafficShare, index)}</td>
+          <td>${trafficMetricCell(item.paymentShare, index, true)}</td>
+          <td class="numeric">${money(item.gpm)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function selectedAudienceRow() {
+  const range = selectedDateRange();
+  const room = selectedRoomInfo();
+  const account = selectedAudienceAccount();
+  const rows = audienceProfileRows
+    .filter((row) => isDateInRange(row.date, range))
+    .filter((row) => state.platform === "all" || row.platform === state.platform)
+    .filter((row) => !room || canonicalRoomName(row.roomName) === canonicalRoomName(room.name))
+    .filter((row) => !account || audienceRowMatchesAccount(row, account))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (!rows.length) return null;
+  if (rows.length === 1) return rows[0];
+  return aggregateAudienceRows(rows);
+}
+
+function audienceRowMatchesAccount(row, account) {
+  const rowAccountId = normalizeValue(row.accountId);
+  if (rowAccountId) return rowAccountId === account.accountId;
+  const platformAliases = {
+    xiaohongshu: "小红书",
+    wechat: "视频号",
+    juliang: "巨量引擎",
+    抖音: "巨量引擎",
+  };
+  const rowPlatform = platformAliases[normalizeValue(row.platform)] || platformAliases[normalizeValue(row.platformLabel)] || normalizeValue(row.platformLabel);
+  return rowPlatform === account.platform && normalizeValue(row.roomName) === account.liveRoomName;
+}
+
+function aggregateAudienceRows(rows) {
+  const dimensions = ["gender", "age", "regions", "phonePrices", "segments"];
+  const metrics = rows.reduce((output, row) => {
+    output.viewers += Number(row.metrics?.viewers || 0);
+    output.impressions += Number(row.metrics?.impressions || 0);
+    output.payers += Number(row.metrics?.payers || 0);
+    output.avgWatchSeconds += Number(row.metrics?.avgWatchSeconds || 0);
+    output.interactionRate += Number(row.metrics?.interactionRate || 0);
+    output.refundRate += Number(row.metrics?.refundRate || 0);
+    return output;
+  }, { viewers: 0, impressions: 0, payers: 0, avgWatchSeconds: 0, interactionRate: 0, refundRate: 0 });
+  ["avgWatchSeconds", "interactionRate", "refundRate"].forEach((key) => {
+    metrics[key] /= rows.length;
+  });
+
+  const profiles = { watch: {}, pay: {} };
+  ["watch", "pay"].forEach((type) => {
+    dimensions.forEach((dimension) => {
+      const labels = [...new Set(rows.flatMap((row) => Object.keys(row.profiles?.[type]?.[dimension] || {})))];
+      const weightKey = type === "watch" ? "viewers" : "payers";
+      const totalWeight = rows.reduce((sum, row) => sum + Math.max(0, Number(row.metrics?.[weightKey] || 0)), 0);
+      profiles[type][dimension] = Object.fromEntries(labels.map((label) => {
+        const weightedValue = rows.reduce((sum, row) => {
+          const weight = Math.max(0, Number(row.metrics?.[weightKey] || 0));
+          return sum + Number(row.profiles?.[type]?.[dimension]?.[label] || 0) * weight;
+        }, 0);
+        return [label, totalWeight ? weightedValue / totalWeight : 0];
+      }));
+    });
+  });
+
+  const channels = [...new Set(rows.flatMap((row) => (row.traffic || []).map((item) => item.channel)))];
+  const traffic = channels.map((channel) => {
+    const matches = rows.flatMap((row) => row.traffic || []).filter((item) => item.channel === channel);
+    return {
+      channel,
+      trafficShare: matches.reduce((sum, item) => sum + Number(item.trafficShare || 0), 0) / matches.length,
+      paymentShare: matches.reduce((sum, item) => sum + Number(item.paymentShare || 0), 0) / matches.length,
+      gpm: matches.reduce((sum, item) => sum + Number(item.gpm || 0), 0) / matches.length,
+    };
+  });
+
+  return { ...rows.at(-1), date: selectedPeriodLabel(), metrics, profiles, traffic };
+}
+
+function audienceChartCard(title, watchProfile = {}, payProfile = {}, key = "") {
+  const categories = [...new Set([...Object.keys(watchProfile), ...Object.keys(payProfile)])];
+  if (!categories.length) {
+    return `<article class="audience-chart-card"><h4>${escapeHtml(title)}</h4><div class="chart-empty">暂无数据</div></article>`;
+  }
+  return `
+    <article class="audience-chart-card ${key === "segments" ? "audience-chart-card-wide" : ""}">
+      <h4>${escapeHtml(title)}</h4>
+      <div class="audience-bar-chart">
+        <div class="audience-y-axis" aria-hidden="true"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div>
+        <div class="audience-plot" style="--category-count:${categories.length}" role="img" aria-label="${escapeHtml(title)}，深蓝为场观人群，浅蓝为购买人群">
+          ${categories.map((label) => audienceBarGroup(label, watchProfile[label] || 0, payProfile[label] || 0)).join("")}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function audienceBarGroup(label, watchValue, payValue) {
+  const safeWatch = Math.max(0, Math.min(100, Number(watchValue || 0)));
+  const safePay = Math.max(0, Math.min(100, Number(payValue || 0)));
+  const accessibleLabel = `${label}：场观人群 ${formatPercent(safeWatch)}，购买人群 ${formatPercent(safePay)}`;
+  return `
+    <div class="audience-bar-group" tabindex="0" aria-label="${escapeHtml(accessibleLabel)}">
+      <div class="audience-bar-pair">
+        <i class="audience-bar watch" style="--bar-height:${safeWatch}%"><span>${formatPercent(safeWatch)}</span></i>
+        <i class="audience-bar pay" style="--bar-height:${safePay}%"><span>${formatPercent(safePay)}</span></i>
+      </div>
+      <strong title="${escapeHtml(label)}">${escapeHtml(label)}</strong>
+    </div>
+  `;
+}
+
+function profileSummaryCard(title, profile, type) {
+  const dimensions = [
+    ["性别", "gender"],
+    ["年龄", "age"],
+    ["地域", "regions"],
+    ["手机价格", "phonePrices"],
+    ["策略人群", "segments"],
+  ];
+  return `
+    <article class="audience-summary-card ${type}">
+      <div class="summary-card-title"><span>${title}</span><i></i></div>
+      <div class="summary-facts">
+        ${dimensions
+          .map(([label, key]) => {
+            const entry = topEntrySafe(profile?.[key]);
+            return `<div><span>${label}</span><strong>${escapeHtml(entry[0])}</strong><em>${formatPercent(entry[1])}</em></div>`;
+          })
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function trafficMetricCell(value, index, payment = false) {
+  return `
+    <div class="traffic-cell">
+      <div class="traffic-mini-track"><i class="${payment ? "payment" : "traffic"}" style="--w:${Math.min(value, 100)}%; --segment:${index}"></i></div>
+      <strong>${formatPercent(value)}</strong>
+    </div>
+  `;
+}
+
+function topEntrySafe(values) {
+  const entries = Object.entries(values || {});
+  return entries.length ? entries.sort((a, b) => b[1] - a[1])[0] : ["暂无", 0];
+}
+
+function formatInteger(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  return Number(value || 0).toLocaleString("zh-CN");
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const number = Number(value || 0);
+  return `${number.toFixed(number % 1 ? 1 : 0)}%`;
+}
+
+function formatAudienceDuration(seconds) {
+  if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) return "-";
+  const total = Math.max(0, Number(seconds || 0));
+  const minutes = Math.floor(total / 60);
+  const remainder = Math.round(total % 60);
+  return `${minutes}分${remainder}秒`;
 }
 
 function renderAccessGrid() {
@@ -1329,28 +1802,6 @@ function renderFunnel() {
         </div>
       `;
     })
-    .join("");
-}
-
-function renderSegments() {
-  const interest = topEntry(weightedProfile("interests"))[0];
-  const age = topEntry(weightedProfile("age"))[0];
-  const city = topEntry(weightedProfile("cities"))[0];
-  const segments = [
-    ["高意向成交人群", `${age}、${city}用户对「${interest}」内容响应最高，建议提高直播前 2 小时触达人群预算。`],
-    ["潜力拉新人群", "点击后未进入直播间的人群占比较高，可用短视频素材强化利益点和开播时间。"],
-    ["复购加热人群", "已互动未下单用户适合用限时券二次触达，投放窗口建议放在主播讲解爆品前。"],
-  ];
-
-  document.querySelector("#segmentList").innerHTML = segments
-    .map(
-      ([title, text]) => `
-        <article class="segment-card">
-          <strong>${title}</strong>
-          <p>${text}</p>
-        </article>
-      `,
-    )
     .join("");
 }
 
@@ -2211,7 +2662,7 @@ function selectedRoomSummaries() {
 }
 
 function trendBuckets() {
-  if (state.view === "live" && liveRoomRows.length) return liveTrendBuckets();
+  if (state.view === "room" && liveRoomRows.length) return liveTrendBuckets();
   const range = state.granularity === "day" ? { start: dailyData[0].date, end: latestAvailableDate } : selectedDateRange();
   return dailyData.filter((day) => isDateInRange(day.date, range)).map((day) => ({ label: day.date.slice(5), data: totals(day) }));
 }
@@ -2223,7 +2674,7 @@ function liveTrendBuckets() {
   const groups = liveRoomRows
     .filter((row) => isDateInRange(row.date, range))
     .filter((row) => platform === "all" || row.platform === platform)
-    .filter((row) => !room || (row.platform === room.platform && row.liveRoomName === room.name))
+    .filter((row) => !room || (row.platform === room.platform && canonicalRoomName(row.liveRoomName) === canonicalRoomName(room.name)))
     .reduce((output, row) => {
       output[row.date] = output[row.date] || {
         label: row.date.slice(5),
@@ -2250,8 +2701,8 @@ function selectedPeriodLabel() {
     custom: "自定义时间",
     "current-month": "本月",
     "last-month": "上月",
-    "last-7": "近7天",
-    "last-15": "近15天",
+    "last-7": "近7日",
+    "last-14": "近14日",
   };
   return `${labels[state.granularity] || "日期范围"} · ${range.start} 至 ${range.end}`;
 }
@@ -2262,8 +2713,8 @@ function periodModeLabel() {
     custom: "自定义时间",
     "current-month": "本月",
     "last-month": "上月",
-    "last-7": "近7天",
-    "last-15": "近15天",
+    "last-7": "近7日",
+    "last-14": "近14日",
   };
   return labels[state.granularity] || "日期范围";
 }

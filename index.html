@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI人群画像看板</title>
+    <title>AI直播数据看板</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -12,26 +12,22 @@
         <div class="brand">
           <span class="brand-mark" aria-hidden="true">AI</span>
           <div>
-            <strong>AI人群画像看板</strong>
-            <span>投放数据工作台</span>
+            <strong>AI直播数据看板</strong>
+            <span>直播间维度工作台</span>
           </div>
         </div>
 
         <nav class="nav-list">
-          <button class="nav-item active" data-view="audience" type="button">
+          <button class="nav-item active" data-view="room" type="button">
             <span aria-hidden="true">01</span>
-            <strong>人群画像</strong>
-          </button>
-          <button class="nav-item" data-view="live" type="button">
-            <span aria-hidden="true">02</span>
-            <strong>直播间基础数据</strong>
+            <strong>直播间维度数据</strong>
           </button>
           <button class="nav-item" data-view="account" type="button">
-            <span aria-hidden="true">03</span>
+            <span aria-hidden="true">02</span>
             <strong>全平台账户消耗明细</strong>
           </button>
           <button class="nav-item" data-view="connect" type="button">
-            <span aria-hidden="true">04</span>
+            <span aria-hidden="true">03</span>
             <strong>数据接入</strong>
           </button>
         </nav>
@@ -47,24 +43,24 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">AD LIVE INTELLIGENCE</p>
-            <h1>广告投放人群与直播间数据看板</h1>
+            <h1>直播间维度数据看板</h1>
           </div>
           <section class="controls" aria-label="筛选条件">
             <label class="field">
               <span>时间维度</span>
               <select id="periodSelect">
                 <option value="day">日汇总</option>
-                <option value="custom">自定义时间</option>
+                <option value="last-7">近7日</option>
+                <option value="last-14">近14日</option>
                 <option value="current-month">本月</option>
                 <option value="last-month">上月</option>
-                <option value="last-7">近7天</option>
-                <option value="last-15">近15天</option>
+                <option value="custom">自定义时间</option>
               </select>
             </label>
-            <label class="field">
+            <div class="field">
               <span id="dateFieldLabel">日期</span>
-              <select id="dateSelect"></select>
-              <div class="custom-date-range" id="customDateRange" aria-label="自定义时间范围">
+              <select id="dateSelect" class="hidden" aria-hidden="true" tabindex="-1"></select>
+              <div class="custom-date-range visible" id="customDateRange" aria-label="日期范围">
                 <button class="date-range-trigger" id="dateRangeTrigger" type="button" aria-haspopup="dialog" aria-expanded="false">
                   <span id="dateRangeText">选择日期范围</span>
                   <span aria-hidden="true">⌄</span>
@@ -73,20 +69,26 @@
                   <div class="date-shortcuts" aria-label="快捷日期">
                     <button type="button" data-range-shortcut="today">今天</button>
                     <button type="button" data-range-shortcut="yesterday">昨天</button>
-                    <button type="button" data-range-shortcut="last-7">近7天</button>
-                    <button type="button" data-range-shortcut="last-15">近15天</button>
+                    <button type="button" data-range-shortcut="last-7">近7日</button>
+                    <button type="button" data-range-shortcut="last-14">近14日</button>
                     <button type="button" data-range-shortcut="current-month">本月</button>
                     <button type="button" data-range-shortcut="last-month">上月</button>
                   </div>
-                  <div class="date-range-panel">
-                    <label>
-                      <span>开始日期</span>
-                      <input id="startDateInput" type="date" />
-                    </label>
-                    <label>
-                      <span>结束日期</span>
-                      <input id="endDateInput" type="date" />
-                    </label>
+                  <div class="date-calendar-panel">
+                    <div class="calendar-toolbar">
+                      <div class="calendar-nav-group">
+                        <button class="calendar-nav year" id="previousCalendarYear" type="button" aria-label="上一年">«</button>
+                        <button class="calendar-nav" id="previousCalendarMonth" type="button" aria-label="上一个月">‹</button>
+                      </div>
+                      <strong id="calendarRangeHint">请选择开始日期</strong>
+                      <div class="calendar-nav-group">
+                        <button class="calendar-nav" id="nextCalendarMonth" type="button" aria-label="下一个月">›</button>
+                        <button class="calendar-nav year" id="nextCalendarYear" type="button" aria-label="下一年">»</button>
+                      </div>
+                    </div>
+                    <div class="date-calendars" id="dateCalendars"></div>
+                    <input id="startDateInput" type="hidden" />
+                    <input id="endDateInput" type="hidden" />
                     <div class="date-range-actions">
                       <button class="text-button" id="cancelDateRange" type="button">取消</button>
                       <button class="text-button primary-action" id="applyDateRange" type="button">应用</button>
@@ -94,16 +96,17 @@
                   </div>
                 </div>
               </div>
-            </label>
-            <label class="field">
-              <span>直播间名称</span>
-              <select id="roomSelect">
-                <option value="all">全部直播间</option>
-                <option value="beauty">美妆个护专场</option>
-                <option value="fashion">轻奢穿搭专场</option>
-                <option value="food">健康食品专场</option>
-              </select>
-            </label>
+            </div>
+            <div class="field">
+              <span>直播间维度</span>
+              <div class="room-picker" id="roomPicker">
+                <button class="room-trigger" id="roomTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
+                  <span id="roomText">全部直播间</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                <div class="room-menu" id="roomMenu" role="menu" aria-label="选择直播间"></div>
+              </div>
+            </div>
             <label class="field account-dimension-field" id="accountDimensionField">
               <span>查看维度</span>
               <div class="dimension-picker" id="accountDimensionPicker">
@@ -125,7 +128,7 @@
               </div>
             </label>
             <button class="icon-button" id="refreshButton" type="button" title="刷新数据" aria-label="刷新数据">
-              <span aria-hidden="true">R</span>
+              <span>刷新</span>
             </button>
           </section>
         </header>
@@ -138,73 +141,102 @@
 
         <section class="summary-strip" id="summaryCards" aria-label="核心指标"></section>
 
-        <section class="view-section active" data-section="audience" aria-label="人群画像">
+        <section class="view-section active room-dashboard-section audience-section" id="audienceSection" data-section="room" aria-label="人群画像">
           <div class="section-title">
             <div>
-              <p class="eyebrow">AUDIENCE PROFILE</p>
+              <p class="eyebrow">01 · AUDIENCE PROFILE</p>
               <h2>人群画像</h2>
             </div>
             <div class="section-actions">
-              <label class="field compact-field">
-                <span>投放平台</span>
-                <select id="platformSelect">
-                  <option value="all">全部平台</option>
-                  <option value="xiaohongshu">小红书</option>
-                  <option value="wechat">视频号</option>
-                  <option value="juliang">巨量引擎</option>
-                </select>
-              </label>
+              <div class="field audience-account-field">
+                <span>投放账户选择</span>
+                <div class="audience-account-picker" id="audienceAccountPicker">
+                  <button class="audience-account-trigger" id="audienceAccountTrigger" type="button" aria-haspopup="menu" aria-expanded="false">
+                    <span id="audienceAccountText">全部投放账户</span>
+                    <span aria-hidden="true">⌄</span>
+                  </button>
+                  <div class="audience-account-menu" id="audienceAccountMenu" role="menu" aria-label="选择投放账户">
+                    <button class="audience-account-all active" data-audience-account="all" type="button">全部投放账户</button>
+                    <div class="audience-account-levels">
+                      <section class="audience-account-level">
+                        <span>平台</span>
+                        <div id="audienceAccountPlatforms"></div>
+                      </section>
+                      <section class="audience-account-level">
+                        <span>直播间</span>
+                        <div id="audienceAccountRooms"></div>
+                      </section>
+                      <section class="audience-account-level">
+                        <span>投放账户</span>
+                        <div id="audienceAccountAccounts"></div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <span id="audienceScope">全部直播间 · 全部平台 · 2026-07-03</span>
             </div>
           </div>
 
-          <section class="audience-layout">
-            <section class="panel audience-panel">
+          <section class="audience-kpi-grid" id="audienceKpis" aria-label="人群画像核心指标"></section>
+
+          <section class="audience-overview-panel">
+            <div class="panel-heading audience-overview-heading">
+              <div>
+                <p class="eyebrow">AUDIENCE COMPARISON</p>
+                <h3>场观人群与购买人群画像</h3>
+              </div>
+              <div class="audience-legend" aria-label="图例">
+                <span><i class="legend-dot watch"></i>场观人群</span>
+                <span><i class="legend-dot pay"></i>购买人群</span>
+              </div>
+            </div>
+            <div class="audience-chart-grid" id="audienceChartGrid" aria-label="人群画像分布图"></div>
+          </section>
+
+          <section class="audience-dashboard-grid">
+
+            <section class="panel panel-wide audience-summary-panel" id="profileSummaryPanel">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">GENDER</p>
-                  <h3>性别结构</h3>
+                  <p class="eyebrow">PROFILE SUMMARY</p>
+                  <h3>画像摘要</h3>
                 </div>
-                <span class="panel-badge">画像核心</span>
+                <span class="panel-badge">全场累计</span>
               </div>
-              <div class="audience-grid">
-                <div class="donut-shell">
-                  <div class="donut" id="genderDonut"></div>
-                  <div>
-                    <strong id="mainGender">女性 68%</strong>
-                    <span>主力性别</span>
-                  </div>
-                </div>
-                <div class="profile-list" id="profileList"></div>
-              </div>
+              <div class="audience-summary-list" id="audienceSummaryList"></div>
             </section>
 
-            <section class="panel">
+            <section class="panel panel-wide traffic-analysis-panel">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">SEGMENTS</p>
-                  <h3>高价值人群</h3>
+                  <p class="eyebrow">TRAFFIC ANALYSIS</p>
+                  <h3>流量渠道表现</h3>
                 </div>
+                <span class="panel-note">渠道占比、支付金额占比与千次观看成交</span>
               </div>
-              <div class="segment-list" id="segmentList"></div>
-            </section>
-
-            <section class="panel panel-wide">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">DISTRIBUTION</p>
-                  <h3>画像分布明细</h3>
-                </div>
+              <div class="traffic-share-strip" id="trafficShareStrip"></div>
+              <div class="traffic-table-wrap">
+                <table class="traffic-table">
+                  <thead>
+                    <tr>
+                      <th>渠道名称</th>
+                      <th>流量占比</th>
+                      <th>支付金额占比</th>
+                      <th class="numeric">渠道千次观看成交</th>
+                    </tr>
+                  </thead>
+                  <tbody id="trafficTableBody"></tbody>
+                </table>
               </div>
-              <div class="profile-breakdown" id="profileBreakdown"></div>
             </section>
           </section>
         </section>
 
-        <section class="view-section" data-section="live" aria-label="直播间基础数据">
+        <section class="view-section room-dashboard-section live-section" id="liveSection" data-section="room" aria-label="直播间基础数据">
           <div class="section-title">
             <div>
-              <p class="eyebrow">LIVE ROOM DATA</p>
+              <p class="eyebrow">02 · LIVE ROOM DATA</p>
               <h2>直播间基础数据</h2>
             </div>
             <span id="liveScope">全部直播间 · 2026-07-03</span>
@@ -423,6 +455,7 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <script src="./audience-profile-data.js"></script>
     <script src="./live-account-relations.js"></script>
     <script src="./live-room-data.js"></script>
     <script src="./platform-spend-data.js"></script>
