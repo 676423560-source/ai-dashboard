@@ -1600,18 +1600,22 @@ function audienceRowMatchesAccount(row, account) {
 
 function aggregateAudienceRows(rows) {
   const dimensions = ["gender", "age", "regions", "phonePrices", "segments"];
-  const metrics = rows.reduce((output, row) => {
-    output.viewers += Number(row.metrics?.viewers || 0);
-    output.impressions += Number(row.metrics?.impressions || 0);
-    output.payers += Number(row.metrics?.payers || 0);
-    output.avgWatchSeconds += Number(row.metrics?.avgWatchSeconds || 0);
-    output.interactionRate += Number(row.metrics?.interactionRate || 0);
-    output.refundRate += Number(row.metrics?.refundRate || 0);
-    return output;
-  }, { viewers: 0, impressions: 0, payers: 0, avgWatchSeconds: 0, interactionRate: 0, refundRate: 0 });
-  ["avgWatchSeconds", "interactionRate", "refundRate"].forEach((key) => {
-    metrics[key] /= rows.length;
-  });
+  const sumMetric = (key) => rows.reduce((sum, row) => sum + Number(row.metrics?.[key] || 0), 0);
+  const averageAvailableMetric = (key) => {
+    const values = rows
+      .map((row) => row.metrics?.[key])
+      .filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)))
+      .map(Number);
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  };
+  const metrics = {
+    viewers: sumMetric("viewers"),
+    impressions: sumMetric("impressions"),
+    payers: sumMetric("payers"),
+    avgWatchSeconds: averageAvailableMetric("avgWatchSeconds"),
+    interactionRate: averageAvailableMetric("interactionRate"),
+    refundRate: averageAvailableMetric("refundRate"),
+  };
 
   const profiles = { watch: {}, pay: {} };
   ["watch", "pay"].forEach((type) => {

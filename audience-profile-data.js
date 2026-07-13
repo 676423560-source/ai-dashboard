@@ -12,7 +12,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:38:12.695Z",
     "metrics": {
       "viewers": 5150,
-      "impressions": null,
+      "impressions": 176698,
       "avgWatchSeconds": 118,
       "interactionRate": null,
       "payers": 127,
@@ -113,7 +113,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:44:06.962Z",
     "metrics": {
       "viewers": 627,
-      "impressions": null,
+      "impressions": 14195,
       "avgWatchSeconds": 93,
       "interactionRate": null,
       "payers": 7,
@@ -214,7 +214,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:44:03.752Z",
     "metrics": {
       "viewers": 810,
-      "impressions": null,
+      "impressions": 19286,
       "avgWatchSeconds": 127,
       "interactionRate": null,
       "payers": 9,
@@ -315,7 +315,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:38:28.531Z",
     "metrics": {
       "viewers": 4015,
-      "impressions": null,
+      "impressions": 75011,
       "avgWatchSeconds": 122,
       "interactionRate": null,
       "payers": 92,
@@ -416,7 +416,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:38:36.587Z",
     "metrics": {
       "viewers": 2642,
-      "impressions": null,
+      "impressions": 43360,
       "avgWatchSeconds": 80,
       "interactionRate": null,
       "payers": 32,
@@ -517,7 +517,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:43:57.733Z",
     "metrics": {
       "viewers": 1432,
-      "impressions": null,
+      "impressions": 38787,
       "avgWatchSeconds": 107,
       "interactionRate": null,
       "payers": 26,
@@ -618,7 +618,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:38:04.691Z",
     "metrics": {
       "viewers": 7787,
-      "impressions": null,
+      "impressions": 204546,
       "avgWatchSeconds": 111,
       "interactionRate": null,
       "payers": 170,
@@ -719,7 +719,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:44:00.755Z",
     "metrics": {
       "viewers": 1429,
-      "impressions": null,
+      "impressions": 32412,
       "avgWatchSeconds": 103,
       "interactionRate": null,
       "payers": 21,
@@ -820,7 +820,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:38:20.708Z",
     "metrics": {
       "viewers": 4953,
-      "impressions": null,
+      "impressions": 126268,
       "avgWatchSeconds": 106,
       "interactionRate": null,
       "payers": 111,
@@ -921,7 +921,7 @@ window.audienceProfileRows = [
     "capturedAt": "2026-07-13T00:44:10.209Z",
     "metrics": {
       "viewers": 59,
-      "impressions": null,
+      "impressions": 1055,
       "avgWatchSeconds": 38,
       "interactionRate": null,
       "payers": 1,
