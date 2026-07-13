@@ -1302,7 +1302,7 @@ function renderScope() {
   document.querySelector("#accountScope").textContent =
     `${roomName} · ${accountPlatformLabel()} · ${state.accountDimension === "project" ? "项目维度" : "账户维度"}${projectScope} · ${period}`;
   document.querySelector("#trendTitle").textContent =
-    state.granularity === "day" ? "按天投放与直播趋势" : "日期范围投放与直播趋势";
+    state.granularity === "day" ? "直播关键指标日趋势" : "所选日期范围关键指标趋势";
 }
 
 function selectedRoomLabel() {
@@ -1402,8 +1402,13 @@ function renderSpendSummary() {
 function renderTrend() {
   const buckets = trendBuckets();
   const chart = document.querySelector("#trendChart");
+  const rangeLabel = document.querySelector("#trendRangeLabel");
+  const range = state.granularity === "day"
+    ? { start: shiftDate(state.date, -13), end: state.date }
+    : selectedDateRange();
+  rangeLabel.textContent = `${range.start} 至 ${range.end} · 仅展示有数据日期`;
   if (!buckets.length) {
-    chart.innerHTML = `<text class="axis-label" x="380" y="155" text-anchor="middle">当前时间范围暂无趋势数据</text>`;
+    chart.innerHTML = `<text class="chart-empty-label" x="380" y="155" text-anchor="middle">当前时间范围暂无有效趋势数据</text>`;
     return;
   }
   const values = buckets.map((bucket) => {
@@ -1416,34 +1421,45 @@ function renderTrend() {
   const labels = buckets.map((bucket) => bucket.label);
   const width = 760;
   const height = 310;
-  const pad = { top: 24, right: 24, bottom: 42, left: 58 };
-  const max = Math.max(...values, 1) * 1.12;
-  const min = state.metric === "roi" ? Math.min(...values) * 0.92 : 0;
+  const pad = { top: 34, right: 28, bottom: 48, left: 72 };
+  const topValue = Math.max(...values, 1);
+  const max = niceTrendMaximum(topValue);
+  const min = 0;
   const points = values.map((value, index) => {
-    const x = pad.left + (index * (width - pad.left - pad.right)) / Math.max(values.length - 1, 1);
+    const x = values.length === 1
+      ? (pad.left + width - pad.right) / 2
+      : pad.left + (index * (width - pad.left - pad.right)) / (values.length - 1);
     const y = height - pad.bottom - ((value - min) / (max - min)) * (height - pad.top - pad.bottom);
     return [x, y, value];
   });
-  const topValue = Math.max(...values, 0);
-  const labelStep = Math.max(1, Math.ceil(values.length / 12));
+  const labelStep = Math.max(1, Math.ceil(values.length / 10));
   const line = points.map(([x, y]) => `${x},${y}`).join(" ");
   const area = `${pad.left},${height - pad.bottom} ${line} ${width - pad.right},${height - pad.bottom}`;
+  const yTicks = Array.from({ length: 5 }, (_, index) => {
+    const value = (max * index) / 4;
+    const y = height - pad.bottom - ((value - min) / (max - min)) * (height - pad.top - pad.bottom);
+    return { value, y };
+  });
 
   chart.innerHTML = `
-    <polyline class="trend-area" points="${area}"></polyline>
-    <polyline class="trend-line" points="${line}"></polyline>
+    ${yTicks.map(({ value, y }) => `
+      <line class="trend-grid-line" x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}"></line>
+      <text class="trend-y-label" x="${pad.left - 12}" y="${y + 4}" text-anchor="end">${compactTrendMetric(value)}</text>
+    `).join("")}
+    ${values.length > 1 ? `<polyline class="trend-area" points="${area}"></polyline>` : ""}
+    ${values.length > 1 ? `<polyline class="trend-line" points="${line}"></polyline>` : ""}
     ${points
       .map(
         ([x, y, value], index) => `
-          <circle class="chart-dot" cx="${x}" cy="${y}" r="5"></circle>
+          <circle class="chart-dot" cx="${x}" cy="${y}" r="5"><title>${labels[index]} · ${formatMetric(value)}</title></circle>
           ${
             values.length <= 12 || index % labelStep === 0 || index === values.length - 1
               ? `<text class="axis-label" x="${x}" y="${height - 16}" text-anchor="middle">${labels[index]}</text>`
               : ""
           }
           ${
-            value > 0 && (values.length <= 12 || index % labelStep === 0 || value === topValue)
-              ? `<text class="axis-label" x="${x}" y="${y - 12}" text-anchor="middle">${formatMetric(value)}</text>`
+            value > 0 && (values.length <= 7 || value === topValue || index === values.length - 1)
+              ? `<text class="trend-value-label" x="${x}" y="${Math.max(y - 13, 18)}" text-anchor="middle">${compactTrendMetric(value)}</text>`
               : ""
           }
         `,
@@ -1452,18 +1468,33 @@ function renderTrend() {
   `;
 }
 
+function niceTrendMaximum(value) {
+  if (value <= 0) return 1;
+  const exponent = 10 ** Math.floor(Math.log10(value));
+  const normalized = value / exponent;
+  const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return nice * exponent;
+}
+
+function compactTrendMetric(value) {
+  if (state.metric === "cost" || state.metric === "orderCost") {
+    if (value >= 10000) return `¥${(value / 10000).toFixed(value >= 100000 ? 0 : 1)}万`;
+    return `¥${Math.round(value).toLocaleString("zh-CN")}`;
+  }
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
+  return Math.round(value).toLocaleString("zh-CN");
+}
+
 function renderAudience() {
   const row = selectedAudienceRow();
   const kpiContainer = document.querySelector("#audienceKpis");
   const chartGrid = document.querySelector("#audienceChartGrid");
-  const summary = document.querySelector("#audienceSummaryList");
   const trafficStrip = document.querySelector("#trafficShareStrip");
   const trafficTable = document.querySelector("#trafficTableBody");
 
   if (!row) {
     kpiContainer.innerHTML = `<div class="audience-empty">当前筛选条件下暂无人群画像数据</div>`;
     chartGrid.innerHTML = `<div class="audience-empty">请选择已有数据的日期、平台或直播间</div>`;
-    summary.innerHTML = `<div class="audience-empty audience-summary-empty">当前筛选范围暂无画像摘要数据</div>`;
     trafficStrip.innerHTML = "";
     trafficTable.innerHTML = `<tr><td colspan="4"><div class="audience-empty">当前筛选范围暂无流量渠道数据</div></td></tr>`;
     return;
@@ -1500,11 +1531,6 @@ function renderAudience() {
   chartGrid.innerHTML = dimensions
     .map(([title, key]) => audienceChartCard(title, row.profiles?.watch?.[key], row.profiles?.pay?.[key], key))
     .join("");
-
-  summary.innerHTML = [
-    profileSummaryCard("场观核心人群", row.profiles?.watch, "watch"),
-    profileSummaryCard("购买核心人群", row.profiles?.pay, "pay"),
-  ].join("");
 
   const traffic = row.traffic || [];
   trafficStrip.innerHTML = traffic
@@ -2663,12 +2689,15 @@ function selectedRoomSummaries() {
 
 function trendBuckets() {
   if (state.view === "room" && liveRoomRows.length) return liveTrendBuckets();
-  const range = state.granularity === "day" ? { start: dailyData[0].date, end: latestAvailableDate } : selectedDateRange();
-  return dailyData.filter((day) => isDateInRange(day.date, range)).map((day) => ({ label: day.date.slice(5), data: totals(day) }));
+  const range = state.granularity === "day" ? { start: shiftDate(state.date, -13), end: state.date } : selectedDateRange();
+  return dailyData
+    .filter((day) => isDateInRange(day.date, range))
+    .map((day) => ({ label: day.date.slice(5), data: totals(day) }))
+    .filter((bucket) => hasTrendData(bucket.data));
 }
 
 function liveTrendBuckets() {
-  const range = state.granularity === "day" ? { start: liveDates[0] || state.date, end: latestLiveDate || state.date } : selectedDateRange();
+  const range = state.granularity === "day" ? { start: shiftDate(state.date, -13), end: state.date } : selectedDateRange();
   const platform = currentRoomPlatformFilter();
   const room = selectedRoomInfo();
   const groups = liveRoomRows
@@ -2691,7 +2720,13 @@ function liveTrendBuckets() {
 
   return Object.entries(groups)
     .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-    .map(([, bucket]) => bucket);
+    .map(([, bucket]) => bucket)
+    .filter((bucket) => hasTrendData(bucket.data));
+}
+
+function hasTrendData(data) {
+  return ["cost", "viewers", "payers", "roomImpressions", "productCardClicks", "orders"]
+    .some((key) => Number(data?.[key] || 0) > 0);
 }
 
 function selectedPeriodLabel() {

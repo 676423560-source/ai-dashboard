@@ -1470,9 +1470,7 @@ button:focus-visible {
   height: 318px;
   border: 1px solid rgba(255, 255, 255, 0.62);
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(245, 248, 255, 0.4)),
-    repeating-linear-gradient(0deg, transparent, transparent 61px, rgba(17, 24, 39, 0.06) 62px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 248, 255, 0.5));
   overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
@@ -1489,16 +1487,46 @@ button:focus-visible {
   font-weight: 700;
 }
 
+.trend-range-label {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.trend-grid-line {
+  stroke: rgba(100, 116, 139, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+}
+
+.trend-y-label,
+.trend-value-label,
+.chart-empty-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.trend-value-label {
+  fill: var(--ink-soft);
+  font-weight: 850;
+}
+
+.chart-empty-label {
+  font-size: 13px;
+}
+
 .trend-line {
   fill: none;
   stroke: #2347b8;
-  stroke-width: 4;
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .trend-area {
-  fill: rgba(35, 71, 184, 0.1);
+  fill: rgba(35, 71, 184, 0.08);
 }
 
 .chart-dot {
