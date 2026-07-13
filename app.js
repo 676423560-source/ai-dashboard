@@ -104,7 +104,8 @@ const dailyData = [
 
 const platformSpendRows = window.platformSpendRows || [];
 const liveAccountRelations = window.liveAccountRelations || [];
-const liveRoomRows = window.liveRoomRows || [];
+// 直播基础数据以电商罗盘为唯一数据源，不再混入已废弃的飞书直播表。
+const liveRoomRows = window.douyinCompassLiveRows || [];
 const audienceProfileRows = window.audienceProfileRows || [];
 const spendDates = platformSpendRows.map((row) => row.date).sort();
 const liveDates = liveRoomRows.map((row) => row.date).filter(Boolean).sort();
@@ -1149,7 +1150,8 @@ function liveRowsForPeriod() {
 }
 
 function liveTotals() {
-  return liveRowsForPeriod().reduce(
+  const rows = liveRowsForPeriod();
+  const totals = rows.reduce(
     (sum, row) => {
       [
         "roomImpressions",
@@ -1163,7 +1165,10 @@ function liveTotals() {
         "hourlyPayers",
         "hourlyViewers",
       ].forEach((key) => {
-        sum[key] += Number(row[key] || 0);
+        if (row[key] !== null && row[key] !== undefined && row[key] !== "" && Number.isFinite(Number(row[key]))) {
+          sum[key] += Number(row[key]);
+          sum.__available[key] = true;
+        }
       });
       return sum;
     },
@@ -1178,8 +1183,17 @@ function liveTotals() {
       orders: 0,
       hourlyPayers: 0,
       hourlyViewers: 0,
+      __available: {},
     },
   );
+  [
+    "roomImpressions", "viewers", "productCardImpressions", "productCardClicks", "payers",
+    "commenters", "cost", "orders", "hourlyPayers", "hourlyViewers",
+  ].forEach((key) => {
+    if (!totals.__available[key]) totals[key] = null;
+  });
+  delete totals.__available;
+  return totals;
 }
 
 function totals(day) {
@@ -1740,10 +1754,10 @@ function renderLiveKpis() {
   if (liveRoomRows.length) {
     const data = liveTotals();
     const kpis = [
-      ["直播间曝光", compact(data.roomImpressions), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
-      ["观看人数", compact(data.viewers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
-      ["商品卡点击", compact(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
-      ["整体消耗", money(data.cost), `支付订单 ${compact(data.orders)}`],
+      ["直播间曝光", metricDisplay(data.roomImpressions), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
+      ["观看人数", metricDisplay(data.viewers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
+      ["商品卡点击", metricDisplay(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
+      ["整体消耗", data.cost === null ? "-" : money(data.cost), `支付订单 ${metricDisplay(data.orders)}`],
     ];
     document.querySelector("#liveKpiList").innerHTML = kpis
       .map(
@@ -1791,15 +1805,15 @@ function renderFunnel() {
       ["支付人数", data.payers],
       ["支付订单", data.orders],
     ];
-    const max = Math.max(steps[0][1], 1);
+    const max = Math.max(...steps.map(([, value]) => Number(value) || 0), 1);
     document.querySelector("#funnel").innerHTML = steps
       .map(([label, value], index) => {
-        const width = Math.max((value / max) * 100, value ? 3 : 0);
+        const width = value === null ? 0 : Math.max((Number(value) / max) * 100, value ? 3 : 0);
         return `
           <div class="funnel-step">
             <span>${label}</span>
             <div class="bar"><span style="--w: ${width}%; --c: ${colors[index % colors.length]}"></span></div>
-            <span>${compact(value)}</span>
+            <span>${metricDisplay(value)}</span>
           </div>
         `;
       })
@@ -2807,6 +2821,10 @@ function money(value) {
 function compact(value) {
   if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
   return value.toLocaleString("zh-CN");
+}
+
+function metricDisplay(value) {
+  return value === null || value === undefined || value === "" ? "-" : compact(value);
 }
 
 function compactLabel(value) {
