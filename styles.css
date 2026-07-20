@@ -1219,6 +1219,24 @@ button:focus-visible {
   background: var(--primary);
 }
 
+#audienceSection > #liveSection {
+  position: relative;
+  margin: 30px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  padding: 28px 0 30px;
+}
+
+#audienceSection > #liveSection::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 96px;
+  height: 2px;
+  background: var(--primary);
+}
+
 .section-title {
   align-items: end;
   justify-content: space-between;

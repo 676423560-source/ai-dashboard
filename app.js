@@ -371,6 +371,12 @@ function makeRoom(name, cost, impressions, clicks, enters, viewers, interactions
 }
 
 function init() {
+  const audienceKpis = document.querySelector("#audienceKpis");
+  const liveSection = document.querySelector("#liveSection");
+  if (audienceKpis && liveSection) {
+    audienceKpis.insertAdjacentElement("afterend", liveSection);
+  }
+
   const dateSelect = document.querySelector("#dateSelect");
   const dateRangeTrigger = document.querySelector("#dateRangeTrigger");
   renderDateOptions();
