@@ -107,17 +107,25 @@ const liveAccountRelations = window.liveAccountRelations || [];
 // 直播基础数据以电商罗盘为唯一数据源，不再混入已废弃的飞书直播表。
 const liveRoomRows = window.douyinCompassLiveRows || [];
 const audienceProfileRows = window.audienceProfileRows || [];
+const superdataPlatformRows = window.superdataPlatformRows || [];
+const superdataPlatformMeta = window.superdataPlatformMeta || {};
 const spendDates = platformSpendRows.map((row) => row.date).sort();
 const liveDates = liveRoomRows.map((row) => row.date).filter(Boolean).sort();
 const audienceDates = audienceProfileRows.map((row) => row.date).filter(Boolean).sort();
+const efficiencyDates = superdataPlatformRows.map((row) => row.date).filter(Boolean).sort();
 const latestSpendDate = spendDates[spendDates.length - 1];
 const latestLiveDate = liveDates[liveDates.length - 1];
 const latestAudienceDate = audienceDates[audienceDates.length - 1];
-const latestAvailableDate = [latestSpendDate, latestLiveDate, latestAudienceDate, dailyData[dailyData.length - 1].date]
+const latestEfficiencyDate = efficiencyDates[efficiencyDates.length - 1];
+const latestAvailableDate = [latestSpendDate, latestLiveDate, latestAudienceDate, latestEfficiencyDate, dailyData[dailyData.length - 1].date]
   .filter(Boolean)
   .sort()
   .at(-1);
-const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates, ...liveDates, ...audienceDates].sort()[0] || latestAvailableDate;
+const defaultDashboardDate = [latestSpendDate, latestLiveDate, latestAudienceDate, dailyData[dailyData.length - 1].date]
+  .filter(Boolean)
+  .sort()
+  .at(-1);
+const earliestAvailableDate = [...dailyData.map((day) => day.date), ...spendDates, ...liveDates, ...audienceDates, ...efficiencyDates].sort()[0] || latestAvailableDate;
 const defaultAccountFields = [
   "platform",
   "name",
@@ -126,8 +134,8 @@ const defaultAccountFields = [
 
 const state = {
   granularity: "day",
-  date: latestAvailableDate,
-  month: latestAvailableDate.slice(0, 7),
+  date: defaultDashboardDate,
+  month: defaultDashboardDate.slice(0, 7),
   customStart: earliestAvailableDate,
   customEnd: latestAvailableDate,
   pendingStart: earliestAvailableDate,
@@ -148,7 +156,8 @@ const state = {
   audienceAccountPlatform: "小红书",
   audienceAccountRoom: "",
   metric: "cost",
-  calendarMonth: latestAvailableDate.slice(0, 7),
+  efficiencyExpanded: new Set(),
+  calendarMonth: defaultDashboardDate.slice(0, 7),
   calendarSelectingEnd: false,
   view: "room",
 };
@@ -517,6 +526,15 @@ function init() {
       state.view = button.dataset.view;
       render();
     });
+  });
+
+  document.querySelector("#efficiencyTableBody").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-efficiency-platform]");
+    if (!button) return;
+    const platform = decodeURIComponent(button.dataset.efficiencyPlatform);
+    if (state.efficiencyExpanded.has(platform)) state.efficiencyExpanded.delete(platform);
+    else state.efficiencyExpanded.add(platform);
+    renderEfficiency();
   });
 
   document.querySelector("#exportButton").addEventListener("click", exportCsv);
@@ -1281,6 +1299,7 @@ function render() {
   renderFunnel();
   renderTable();
   renderAccountDetails();
+  renderEfficiency();
   applyMotion();
 }
 
@@ -1293,8 +1312,10 @@ function renderView() {
   });
   document.querySelector("#accountDimensionField").classList.toggle("visible", state.view === "account");
   document.querySelector("#accountPlatformField").classList.toggle("visible", state.view === "account");
-  document.querySelector("#summaryCards").hidden = state.view === "room";
+  document.querySelector("#roomDimensionField").hidden = state.view === "efficiency";
+  document.querySelector("#summaryCards").hidden = state.view === "room" || state.view === "efficiency";
   document.querySelector(".controls").classList.toggle("room-mode", state.view === "room");
+  document.querySelector(".controls").classList.toggle("efficiency-mode", state.view === "efficiency");
 }
 
 function renderScope() {
@@ -1734,6 +1755,161 @@ function formatAudienceDuration(seconds) {
   const minutes = Math.floor(total / 60);
   const remainder = Math.round(total % 60);
   return `${minutes}分${remainder}秒`;
+}
+
+function renderEfficiency() {
+  const body = document.querySelector("#efficiencyTableBody");
+  if (!body) return;
+  const rows = efficiencyRowsForPeriod();
+  const total = aggregateEfficiencyRows(rows);
+  const platformGroups = groupEfficiencyRows(rows, (row) => efficiencyPlatformName(row.channel2));
+  const kpis = [
+    ["总消耗", formatUsd(total.spend), `${platformGroups.length} 个平台`],
+    ["投放线索", formatInteger(total.paidLeads), `CPA ${efficiencyCost(total.spend, total.paidLeads)}`],
+    ["总线索", formatInteger(total.leads), `线索约课率 ${efficiencyPercent(total.books, total.leads)}`],
+    ["完课", formatInteger(total.trials), `约课完课率 ${efficiencyPercent(total.trials, total.books)}`],
+    ["顺次转化", formatInteger(total.sequentialPaid), `完课转化率 ${efficiencyPercent(total.sequentialPaid, total.trials)}`],
+    ["当期转化", formatInteger(total.currentPaid), `当期转化率 ${efficiencyPercent(total.currentPaid, total.leads)}`],
+  ];
+
+  document.querySelector("#efficiencyKpis").innerHTML = kpis.map(([label, value, note]) => `
+    <article class="efficiency-kpi">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(note)}</small>
+    </article>
+  `).join("");
+  document.querySelector("#efficiencyScope").textContent = `${selectedPeriodLabel()} · ${platformGroups.length} 个平台`;
+  document.querySelector("#efficiencyFreshness").textContent = efficiencyFreshnessLabel();
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="17" class="efficiency-empty">当前日期范围暂无 Superdata 后转数据</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = platformGroups
+    .sort((a, b) => b.metrics.spend - a.metrics.spend)
+    .map((group) => {
+      const expanded = state.efficiencyExpanded.has(group.name);
+      const subgroups = groupEfficiencyRows(group.rows, efficiencySubchannelName)
+        .sort((a, b) => b.metrics.spend - a.metrics.spend);
+      const parent = efficiencyRowMarkup(group.name, group.metrics, {
+        level: "platform",
+        expanded,
+        childCount: subgroups.length,
+      });
+      const children = expanded
+        ? subgroups.map((item) => efficiencyRowMarkup(item.name, item.metrics, { level: "channel" })).join("")
+        : "";
+      return parent + children;
+    })
+    .join("");
+}
+
+function efficiencyRowsForPeriod() {
+  const range = selectedDateRange();
+  return superdataPlatformRows.filter((row) => row.date && isDateInRange(row.date, range));
+}
+
+function groupEfficiencyRows(rows, nameForRow) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    const name = nameForRow(row) || "未分类";
+    if (!groups.has(name)) groups.set(name, []);
+    groups.get(name).push(row);
+  });
+  return [...groups.entries()].map(([name, groupRows]) => ({
+    name,
+    rows: groupRows,
+    metrics: aggregateEfficiencyRows(groupRows),
+  }));
+}
+
+function aggregateEfficiencyRows(rows) {
+  const additiveKeys = [
+    "spend", "paidLeads", "paidBooks", "leads", "registers", "books", "trials",
+    "sequentialPaid", "currentPaid", "sequentialGmv", "currentGmv", "currentRefunds",
+  ];
+  const output = Object.fromEntries(additiveKeys.map((key) => [key, 0]));
+  let ltpWeightedSum = 0;
+  let ltpWeight = 0;
+  rows.forEach((row) => {
+    additiveKeys.forEach((key) => {
+      output[key] += Number(row[key] || 0);
+    });
+    const weight = Math.max(0, Number(row.sequentialPaid || row.currentPaid || 0));
+    if (row.ltpHours !== null && row.ltpHours !== undefined && weight) {
+      ltpWeightedSum += Number(row.ltpHours) * weight;
+      ltpWeight += weight;
+    }
+  });
+  output.ltpHours = ltpWeight ? ltpWeightedSum / ltpWeight : null;
+  return output;
+}
+
+function efficiencyPlatformName(value) {
+  const name = normalizeValue(value) || "未分类";
+  if (name.includes("视频号") || name === "微信") return "视频号";
+  if (name.includes("抖音")) return "抖音";
+  if (name.includes("小红书")) return "小红书";
+  return name;
+}
+
+function efficiencySubchannelName(row) {
+  const third = normalizeValue(row.channel3);
+  const fourth = normalizeValue(row.channel4);
+  if (!third || third === "0" || third === "未分类") return fourth || "其他";
+  return fourth && fourth !== "0" ? `${third} · ${fourth}` : third;
+}
+
+function efficiencyRowMarkup(label, metrics, options = {}) {
+  const platform = options.level === "platform";
+  const toggle = platform
+    ? `<button class="efficiency-expand" data-efficiency-platform="${encodeURIComponent(label)}" type="button" aria-expanded="${options.expanded}"><span aria-hidden="true">${options.expanded ? "−" : "+"}</span></button>`
+    : `<span class="efficiency-indent" aria-hidden="true"></span>`;
+  return `
+    <tr class="efficiency-row ${platform ? "platform-row" : "channel-row"}">
+      <td><div class="efficiency-name">${toggle}<strong>${escapeHtml(label)}</strong>${platform ? `<small>${options.childCount} 个渠道</small>` : ""}</div></td>
+      <td class="numeric">${formatUsd(metrics.spend)}</td>
+      <td class="numeric">${formatInteger(metrics.paidLeads)}</td>
+      <td class="numeric">${efficiencyCost(metrics.spend, metrics.paidLeads)}</td>
+      <td class="numeric">${efficiencyCost(metrics.spend, metrics.paidBooks)}</td>
+      <td class="numeric">${efficiencyCost(metrics.spend, metrics.currentPaid)}</td>
+      <td class="numeric">${formatInteger(metrics.leads)}</td>
+      <td class="numeric">${formatInteger(metrics.registers)}</td>
+      <td class="numeric">${formatInteger(metrics.books)}</td>
+      <td class="numeric">${formatInteger(metrics.trials)}</td>
+      <td class="numeric">${formatInteger(metrics.sequentialPaid)}</td>
+      <td class="numeric">${formatInteger(metrics.currentPaid)}</td>
+      <td class="numeric">${efficiencyPercent(metrics.currentPaid, metrics.leads)}</td>
+      <td class="numeric">${metrics.ltpHours === null ? "-" : `${metrics.ltpHours.toFixed(1)}h`}</td>
+      <td class="numeric">${formatUsd(metrics.sequentialGmv)}</td>
+      <td class="numeric">${formatUsd(metrics.currentGmv)}</td>
+      <td class="numeric">${efficiencyPercent(metrics.currentRefunds, metrics.currentPaid)}</td>
+    </tr>
+  `;
+}
+
+function efficiencyCost(spend, count) {
+  return Number(count || 0) ? formatUsd(Number(spend || 0) / Number(count)) : "-";
+}
+
+function efficiencyPercent(numerator, denominator) {
+  return Number(denominator || 0) ? `${((Number(numerator || 0) / Number(denominator)) * 100).toFixed(1)}%` : "-";
+}
+
+function formatUsd(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  return `$${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function efficiencyFreshnessLabel() {
+  if (!superdataPlatformMeta.capturedAt) return "Superdata 平台拆解 · 暂无更新时间";
+  const captured = new Date(superdataPlatformMeta.capturedAt);
+  const text = Number.isNaN(captured.getTime())
+    ? superdataPlatformMeta.capturedAt
+    : captured.toLocaleString("zh-CN", { hour12: false });
+  return `Superdata 平台拆解 · 更新于 ${text}`;
 }
 
 function renderAccessGrid() {

@@ -22,20 +22,24 @@
             <span aria-hidden="true">01</span>
             <strong>直播间维度数据</strong>
           </button>
-          <button class="nav-item" data-view="account" type="button">
+          <button class="nav-item" data-view="efficiency" type="button">
             <span aria-hidden="true">02</span>
+            <strong>直播间后转效率</strong>
+          </button>
+          <button class="nav-item" data-view="account" type="button">
+            <span aria-hidden="true">03</span>
             <strong>全平台账户消耗明细</strong>
           </button>
           <button class="nav-item" data-view="connect" type="button">
-            <span aria-hidden="true">03</span>
+            <span aria-hidden="true">04</span>
             <strong>数据接入</strong>
           </button>
         </nav>
 
         <section class="sync-panel" aria-label="数据同步状态">
           <span>数据状态</span>
-          <strong>飞书 API 已接入</strong>
-          <p>双击桌面“数据看板更新”即可拉取直播间数据并同步上线。</p>
+          <strong>电商罗盘 / Superdata 已接入</strong>
+          <p>直播数据与后转效率按来源分别更新，页面显示最近一次取数时间。</p>
         </section>
       </aside>
 
@@ -57,7 +61,7 @@
                 <option value="custom">自定义时间</option>
               </select>
             </label>
-            <div class="field">
+            <div class="field" id="roomDimensionField">
               <span id="dateFieldLabel">日期</span>
               <select id="dateSelect" class="hidden" aria-hidden="true" tabindex="-1"></select>
               <div class="custom-date-range visible" id="customDateRange" aria-label="日期范围">
@@ -309,6 +313,60 @@
           </section>
         </section>
 
+        <section class="view-section" data-section="efficiency" aria-label="直播间后转效率">
+          <div class="section-title efficiency-title">
+            <div>
+              <p class="eyebrow">POST-LIVE CONVERSION</p>
+              <h2>直播间后转效率</h2>
+            </div>
+            <div class="efficiency-source">
+              <span id="efficiencyScope">全部平台</span>
+              <small id="efficiencyFreshness">Superdata 平台拆解</small>
+            </div>
+          </div>
+
+          <section class="efficiency-kpis" id="efficiencyKpis" aria-label="后转效率核心指标"></section>
+
+          <section class="panel panel-wide efficiency-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">PLATFORM BREAKDOWN</p>
+                <h3>平台拆解</h3>
+              </div>
+              <div class="efficiency-legend">
+                <span>ESL 口径</span>
+                <span>金额单位：USD</span>
+              </div>
+            </div>
+            <div class="efficiency-table-wrap">
+              <table class="efficiency-table">
+                <thead>
+                  <tr>
+                    <th>平台 / 渠道</th>
+                    <th class="numeric">消耗</th>
+                    <th class="numeric">投放线索</th>
+                    <th class="numeric">CPA</th>
+                    <th class="numeric">约课成本</th>
+                    <th class="numeric">CAC</th>
+                    <th class="numeric">总线索</th>
+                    <th class="numeric">注册</th>
+                    <th class="numeric">约课</th>
+                    <th class="numeric">完课</th>
+                    <th class="numeric">顺次转化</th>
+                    <th class="numeric">当期转化</th>
+                    <th class="numeric">当期转化率</th>
+                    <th class="numeric">线转耗时</th>
+                    <th class="numeric">顺次 GMV</th>
+                    <th class="numeric">当期 GMV</th>
+                    <th class="numeric">当期退费率</th>
+                  </tr>
+                </thead>
+                <tbody id="efficiencyTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
         <section class="view-section" data-section="account" aria-label="全平台账户消耗明细">
           <div class="section-title">
             <div>
@@ -448,6 +506,7 @@
     <script src="./live-account-relations.js"></script>
     <script src="./douyin-compass-live-data.js"></script>
     <script src="./platform-spend-data.js"></script>
+    <script src="./superdata-platform-data.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
