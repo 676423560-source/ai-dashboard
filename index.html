@@ -47,7 +47,7 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">AD LIVE INTELLIGENCE</p>
-            <h1>直播间维度数据看板</h1>
+            <h1 id="dashboardTitle">直播间维度数据看板</h1>
           </div>
           <section class="controls" aria-label="筛选条件">
             <label class="field">
@@ -61,7 +61,7 @@
                 <option value="custom">自定义时间</option>
               </select>
             </label>
-            <div class="field" id="roomDimensionField">
+            <div class="field" id="dateDimensionField">
               <span id="dateFieldLabel">日期</span>
               <select id="dateSelect" class="hidden" aria-hidden="true" tabindex="-1"></select>
               <div class="custom-date-range visible" id="customDateRange" aria-label="日期范围">
@@ -101,7 +101,7 @@
                 </div>
               </div>
             </div>
-            <div class="field">
+            <div class="field" id="roomDimensionField">
               <span>直播间维度</span>
               <div class="room-picker" id="roomPicker">
                 <button class="room-trigger" id="roomTrigger" type="button" aria-haspopup="menu" aria-expanded="false">

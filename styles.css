@@ -32,6 +32,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   min-width: 320px;
 }
@@ -324,6 +328,19 @@ h3 {
 
 .controls.room-mode .icon-button {
   width: 64px;
+}
+
+.controls.efficiency-mode {
+  grid-template-columns: minmax(150px, 0.8fr) minmax(250px, 1.25fr) 64px;
+  max-width: min(100%, 680px);
+}
+
+.controls.efficiency-mode .icon-button {
+  width: 64px;
+}
+
+body[data-view="efficiency"] .status-row {
+  margin-bottom: 24px;
 }
 
 .controls:has(.dimension-picker.open),
@@ -3304,6 +3321,11 @@ tbody tr.interactive-row.active {
     max-width: 100%;
   }
 
+  .controls.efficiency-mode {
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+    max-width: 100%;
+  }
+
   .summary-strip,
   .layout-grid,
   .audience-layout,
@@ -3400,7 +3422,15 @@ tbody tr.interactive-row.active {
     grid-template-columns: 1fr;
   }
 
+  .controls.efficiency-mode {
+    grid-template-columns: 1fr;
+  }
+
   .controls.room-mode .icon-button {
+    width: 100%;
+  }
+
+  .controls.efficiency-mode .icon-button {
     width: 100%;
   }
 

@@ -1304,6 +1304,14 @@ function render() {
 }
 
 function renderView() {
+  document.body.dataset.view = state.view;
+  const titles = {
+    room: "直播间维度数据看板",
+    efficiency: "直播间后转效率看板",
+    account: "全平台账户数据看板",
+    connect: "数据接入管理",
+  };
+  document.querySelector("#dashboardTitle").textContent = titles[state.view] || titles.room;
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === state.view);
   });
