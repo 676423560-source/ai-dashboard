@@ -18,7 +18,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 7.06,
     "hourlyViewers": 286.43,
     "exposureEnterRate": 0.036718,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.3275728155339806,
     "clickPayRate": 0.075282,
     "viewPayRate": 0.023967,
     "source": "抖音电商罗盘接口"
@@ -42,7 +42,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.02,
     "hourlyViewers": 91.67,
     "exposureEnterRate": 0.058471,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.21690590111642744,
     "clickPayRate": 0.051471,
     "viewPayRate": 0.010558,
     "source": "抖音电商罗盘接口"
@@ -66,7 +66,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 0.82,
     "hourlyViewers": 73.57,
     "exposureEnterRate": 0.060769,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.1814814814814815,
     "clickPayRate": 0.061224,
     "viewPayRate": 0.010588,
     "source": "抖音电商罗盘接口"
@@ -90,7 +90,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 7.63,
     "hourlyViewers": 333.2,
     "exposureEnterRate": 0.075002,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.30635118306351183,
     "clickPayRate": 0.074797,
     "viewPayRate": 0.021667,
     "source": "抖音电商罗盘接口"
@@ -114,7 +114,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 5.53,
     "hourlyViewers": 456.3,
     "exposureEnterRate": 0.084548,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.24829674489023468,
     "clickPayRate": 0.04878,
     "viewPayRate": 0.011482,
     "source": "抖音电商罗盘接口"
@@ -138,7 +138,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.44,
     "hourlyViewers": 79.56,
     "exposureEnterRate": 0.053085,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2032122905027933,
     "clickPayRate": 0.089347,
     "viewPayRate": 0.017162,
     "source": "抖音电商罗盘接口"
@@ -162,7 +162,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 9.47,
     "hourlyViewers": 433.57,
     "exposureEnterRate": 0.050771,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.31937845126492875,
     "clickPayRate": 0.068355,
     "viewPayRate": 0.021131,
     "source": "抖音电商罗盘接口"
@@ -186,7 +186,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.17,
     "hourlyViewers": 79.48,
     "exposureEnterRate": 0.061921,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.1952414275717285,
     "clickPayRate": 0.075269,
     "viewPayRate": 0.013871,
     "source": "抖音电商罗盘接口"
@@ -210,7 +210,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 6.17,
     "hourlyViewers": 275.32,
     "exposureEnterRate": 0.051153,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.3472642842721583,
     "clickPayRate": 0.064535,
     "viewPayRate": 0.021786,
     "source": "抖音电商罗盘接口"
@@ -234,7 +234,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 2.13,
     "hourlyViewers": 125.53,
     "exposureEnterRate": 0.095735,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.22033898305084745,
     "clickPayRate": 0.076923,
     "viewPayRate": 0.012195,
     "source": "抖音电商罗盘接口"
@@ -258,7 +258,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 7.08,
     "hourlyViewers": 427.83,
     "exposureEnterRate": 0.071476,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.24274163910327085,
     "clickPayRate": 0.06813,
     "viewPayRate": 0.015881,
     "source": "抖音电商罗盘接口"
@@ -282,7 +282,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.44,
     "hourlyViewers": 72.22,
     "exposureEnterRate": 0.046546,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2153846153846154,
     "clickPayRate": 0.092857,
     "viewPayRate": 0.018611,
     "source": "抖音电商罗盘接口"
@@ -306,7 +306,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 0,
     "hourlyViewers": 66.67,
     "exposureEnterRate": 0.3,
-    "productCardClickRate": null,
+    "productCardClickRate": 0,
     "clickPayRate": 0,
     "viewPayRate": 0,
     "source": "抖音电商罗盘接口"
@@ -330,7 +330,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 4.04,
     "hourlyViewers": 475.51,
     "exposureEnterRate": 0.068096,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2499557443795362,
     "clickPayRate": 0.033994,
     "viewPayRate": 0.008421,
     "source": "抖音电商罗盘接口"
@@ -354,7 +354,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 2.61,
     "hourlyViewers": 307.16,
     "exposureEnterRate": 0.062433,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.26409978308026033,
     "clickPayRate": 0.03217,
     "viewPayRate": 0.008375,
     "source": "抖音电商罗盘接口"
@@ -378,7 +378,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 14.93,
     "hourlyViewers": 951.01,
     "exposureEnterRate": 0.129173,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.21390024529844645,
     "clickPayRate": 0.073394,
     "viewPayRate": 0.014697,
     "source": "抖音电商罗盘接口"
@@ -402,7 +402,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 4.1,
     "hourlyViewers": 291.3,
     "exposureEnterRate": 0.083691,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.20796719390743995,
     "clickPayRate": 0.067606,
     "viewPayRate": 0.01343,
     "source": "抖音电商罗盘接口"
@@ -426,7 +426,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 0.39,
     "hourlyViewers": 193.44,
     "exposureEnterRate": 0.079316,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.19161676646706588,
     "clickPayRate": 0.010417,
     "viewPayRate": 0.00189,
     "source": "抖音电商罗盘接口"
@@ -450,7 +450,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 3.25,
     "hourlyViewers": 322.92,
     "exposureEnterRate": 0.10764,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2129396984924623,
     "clickPayRate": 0.047198,
     "viewPayRate": 0.009507,
     "source": "抖音电商罗盘接口"
@@ -474,7 +474,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.72,
     "hourlyViewers": 201.44,
     "exposureEnterRate": 0.065374,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.24628508530544854,
     "clickPayRate": 0.034637,
     "viewPayRate": 0.008387,
     "source": "抖音电商罗盘接口"
@@ -498,7 +498,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 6.93,
     "hourlyViewers": 390.68,
     "exposureEnterRate": 0.112712,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.24113475177304963,
     "clickPayRate": 0.073529,
     "viewPayRate": 0.017017,
     "source": "抖音电商罗盘接口"
@@ -522,7 +522,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 4.88,
     "hourlyViewers": 237.66,
     "exposureEnterRate": 0.110616,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2206598161168199,
     "clickPayRate": 0.093137,
     "viewPayRate": 0.019124,
     "source": "抖音电商罗盘接口"
@@ -546,7 +546,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 0.56,
     "hourlyViewers": 196.61,
     "exposureEnterRate": 0.090926,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.20114942528735633,
     "clickPayRate": 0.014286,
     "viewPayRate": 0.002801,
     "source": "抖音电商罗盘接口"
@@ -570,7 +570,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 3.42,
     "hourlyViewers": 219.18,
     "exposureEnterRate": 0.094954,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2234375,
     "clickPayRate": 0.06993,
     "viewPayRate": 0.014804,
     "source": "抖音电商罗盘接口"
@@ -594,7 +594,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 2.39,
     "hourlyViewers": 261.04,
     "exposureEnterRate": 0.067334,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.21258503401360543,
     "clickPayRate": 0.043,
     "viewPayRate": 0.009005,
     "source": "抖音电商罗盘接口"
@@ -618,7 +618,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 7.29,
     "hourlyViewers": 379.49,
     "exposureEnterRate": 0.098985,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.29298794104510945,
     "clickPayRate": 0.065549,
     "viewPayRate": 0.0184,
     "source": "抖音电商罗盘接口"
@@ -642,7 +642,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 13.47,
     "hourlyViewers": 671.46,
     "exposureEnterRate": 0.128892,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2640323304894477,
     "clickPayRate": 0.075964,
     "viewPayRate": 0.018578,
     "source": "抖音电商罗盘接口"
@@ -666,7 +666,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 2.59,
     "hourlyViewers": 203.52,
     "exposureEnterRate": 0.095717,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.20291173794358508,
     "clickPayRate": 0.06278,
     "viewPayRate": 0.012027,
     "source": "抖音电商罗盘接口"
@@ -690,7 +690,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 3.28,
     "hourlyViewers": 240.85,
     "exposureEnterRate": 0.102936,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.20841931489888568,
     "clickPayRate": 0.065347,
     "viewPayRate": 0.012796,
     "source": "抖音电商罗盘接口"
@@ -714,7 +714,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.11,
     "hourlyViewers": 177.17,
     "exposureEnterRate": 0.071114,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.22765757290686736,
     "clickPayRate": 0.027548,
     "viewPayRate": 0.0062,
     "source": "抖音电商罗盘接口"
@@ -738,7 +738,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 9.61,
     "hourlyViewers": 435.5,
     "exposureEnterRate": 0.093668,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.28268911851001405,
     "clickPayRate": 0.078069,
     "viewPayRate": 0.020861,
     "source": "抖音电商罗盘接口"
@@ -762,7 +762,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 4.89,
     "hourlyViewers": 210.11,
     "exposureEnterRate": 0.10746,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2374405076679006,
     "clickPayRate": 0.097996,
     "viewPayRate": 0.021696,
     "source": "抖音电商罗盘接口"
@@ -786,7 +786,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.89,
     "hourlyViewers": 242.91,
     "exposureEnterRate": 0.075085,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.2299771167048055,
     "clickPayRate": 0.033831,
     "viewPayRate": 0.007564,
     "source": "抖音电商罗盘接口"
@@ -810,7 +810,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 5.89,
     "hourlyViewers": 233.96,
     "exposureEnterRate": 0.065349,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.323592302209551,
     "clickPayRate": 0.077827,
     "viewPayRate": 0.024124,
     "source": "抖音电商罗盘接口"
@@ -834,7 +834,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 2.95,
     "hourlyViewers": 159.9,
     "exposureEnterRate": 0.079358,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.216,
     "clickPayRate": 0.085346,
     "viewPayRate": 0.017509,
     "source": "抖音电商罗盘接口"
@@ -858,7 +858,7 @@ window.douyinCompassLiveRows = [
     "hourlyPayers": 1.89,
     "hourlyViewers": 230.26,
     "exposureEnterRate": 0.076887,
-    "productCardClickRate": null,
+    "productCardClickRate": 0.22439613526570049,
     "clickPayRate": 0.036598,
     "viewPayRate": 0.008084,
     "source": "抖音电商罗盘接口"

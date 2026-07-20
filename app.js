@@ -1368,7 +1368,7 @@ function renderSummary() {
       ["观看人数", compact(data.viewers), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
       ["支付人数", compact(data.payers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
       ["支付订单", compact(data.orders), `点击成交率 ${percentOrDash(rate(data.payers, data.productCardClicks))}`],
-      ["商品卡点击", compact(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
+      ["商品卡点击", compact(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.viewers))}`],
     ];
 
     document.querySelector("#summaryCards").innerHTML = cards
@@ -1944,8 +1944,8 @@ function renderLiveKpis() {
     const kpis = [
       ["直播间曝光", metricDisplay(data.roomImpressions), `曝光进入率 ${percentOrDash(rate(data.viewers, data.roomImpressions))}`],
       ["观看人数", metricDisplay(data.viewers), `观看成交率 ${percentOrDash(rate(data.payers, data.viewers))}`],
-      ["商品卡点击", metricDisplay(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.productCardImpressions))}`],
-      ["整体消耗", data.cost === null ? "-" : money(data.cost), `支付订单 ${metricDisplay(data.orders)}`],
+      ["商品卡点击", metricDisplay(data.productCardClicks), `商卡点击率 ${percentOrDash(rate(data.productCardClicks, data.viewers))}`],
+      ["点击成交率", percentOrDash(rate(data.payers, data.productCardClicks)), `成交人数 ${metricDisplay(data.payers)}`],
     ];
     document.querySelector("#liveKpiList").innerHTML = kpis
       .map(
